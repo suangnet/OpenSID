@@ -3754,7 +3754,7 @@ textarea.form-control.is-invalid {
   left: 0px;
   height: 100%;
   width: 100%;
-  background-color: var(--secondary-base-color);
+  background-color: var(--primary-base-color);
   opacity: 0.18;
   --tw-content: '';
   content: var(--tw-content);
@@ -3763,7 +3763,7 @@ textarea.form-control.is-invalid {
   --tw-bg-opacity: 0.5;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
-  color: var(--secondary-base-color);
+  color: var(--primary-base-color);
 }
 @media (min-width: 1024px) {
   .sidebar .box-header {
