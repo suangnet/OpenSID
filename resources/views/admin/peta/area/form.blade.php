@@ -22,9 +22,7 @@
             {!! form_open_multipart($form_action, 'class="form-horizontal" id="validasi"') !!}
             <div class="box box-info">
                 <div class="box-header with-border">
-                    <a href="{{ ci_route('area.index') }}" class="btn btn-social btn-info btn-sm btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block">
-                        <i class="fa fa-arrow-circle-left "></i>Kembali ke Area
-                    </a>
+                    <x-kembali-button judul="Kembali Ke Area" url="area" />
                 </div>
                 <div class="box-body">
                     <div class="form-group">
@@ -57,7 +55,7 @@
                         <div class="col-sm-7">
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control" id="file_path">
-                                <input id="file" type="file" class="hidden" name="foto" accept=".gif,.jpg,.jpeg,.png">
+                                <input id="file" type="file" class="hidden" name="foto" accept=".gif,.jpg,.jpeg,.png,.webp">
                                 <span class="input-group-btn">
                                     <button type="button" class="btn btn-info " id="file_browser"><i class="fa fa-search"></i> Browse</button>
                                 </span>
@@ -72,32 +70,15 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-xs-12 col-sm-3 col-lg-3 control-label" for="status">Status</label>
-                        <div class="btn-group col-xs-12 col-sm-9" data-toggle="buttons">
-                            <label id="sx3" class="btn btn-info  btn-sm col-xs-6 col-sm-4 col-lg-2 form-check-label @active($area->enabled == \App\Models\Area::UNLOCK || $area->enabled == null)">
-                                <input
-                                    id="sx1"
-                                    type="radio"
-                                    name="enabled"
-                                    class="form-check-input"
-                                    type="radio"
-                                    value="{{ \App\Models\Area::UNLOCK }}"
-                                    @checked($area->enabled == \App\Models\Area::UNLOCK || $area->enabled == null)
-                                    autocomplete="off"
-                                > Aktif
-                            </label>
-                            <label id="sx4" class="btn btn-info  btn-sm col-xs-6 col-sm-4 col-lg-2 form-check-label @active($area->enabled == \App\Models\Area::LOCK)">
-                                <input
-                                    id="sx2"
-                                    type="radio"
-                                    name="enabled"
-                                    class="form-check-input"
-                                    type="radio"
-                                    value="{{ \App\Models\Area::LOCK }}"
-                                    @checked($area->enabled == \App\Models\Area::LOCK)
-                                    autocomplete="off"
-                                > Tidak Aktif
-                            </label>
+                        <label class="col-sm-3 control-label" for="enabled">Status</label>
+                        <div class="col-sm-6">
+                            <select name="enabled" id="enabled" class="form-control input-sm required">
+                                @foreach (\App\Enums\AktifEnum::all() as $value => $label)
+                                <option value="{{ $value }}" @selected($area->enabled==$value)>
+                                    {{ $label }}
+                                </option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -113,11 +94,3 @@
         </div>
     </div>
 @endsection
-
-@push('scripts')
-    <script>
-        $(document).ready(function() {
-
-        })
-    </script>
-@endpush

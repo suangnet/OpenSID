@@ -20,13 +20,7 @@
         <div class="col-md-12">
             <div class="box box-info">
                 <div class="box-header with-border">
-                    @if (can('u'))
-                        <a href="#confirm-delete" title="Hapus Data" onclick="deleteAllBox('mainform', '{{ ci_route('komentar.delete_all') }}')"
-                            class="btn btn-social btn-danger btn-sm
-                        visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block
-                        hapus-terpilih"
-                        ><i class='fa fa-trash-o'></i> Hapus</a>
-                    @endif
+                    <x-hapus-button :url="'komentar/delete_all'" :confirmDelete="true" :selectData="true" />
                 </div>
                 <div class="box-body">
                     <div class="row">
@@ -37,8 +31,9 @@
                                         <div class="col-sm-2">
                                             <select name="status" id="status" class="form-control input-sm select2">
                                                 <option value="">Semua</option>
-                                                <option value="1">Aktif</option>
-                                                <option value="0">Tidak Aktif</option>
+                                                <option value="{{ App\Models\Komentar::ACTIVE }}">Aktif</option>
+                                                <option value="{{ App\Models\Komentar::NONACTIVE }}">Tidak Aktif</option>
+                                                <option value="{{ App\Models\Komentar::UNREAD }}">Belum Dibaca</option>
                                             </select>
                                         </div>
                                     </div>
@@ -78,7 +73,7 @@
     @push('scripts')
         <script>
             $(document).ready(function() {
-                $('#status').val('1').trigger('change');
+                $('#status').val({{ $defaultStatus }}).trigger('change');
 
                 var TableData = $('#tabeldata').DataTable({
                     responsive: true,
@@ -157,7 +152,7 @@
                 });
 
                 $('#status').change(function() {
-                    TableData.column(8).search($(this).val()).draw()
+                    TableData.draw()
                 })
 
                 if (hapus == 0) {

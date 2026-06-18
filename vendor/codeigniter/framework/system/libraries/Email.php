@@ -360,6 +360,8 @@ class CI_Email {
 	 */
 	protected $_bit_depths		= array('7bit', '8bit');
 
+	public $active = 0;
+	
 	/**
 	 * $priority translations
 	 *
@@ -1681,6 +1683,12 @@ class CI_Email {
 	 */
 	public function send($auto_clear = TRUE)
 	{
+		if (! $this->active) {
+            log_message('error', 'email tidak dikirim karena pengaturan notifikasi email dinonaktifkan');
+
+            return false;
+        }
+		
 		if ( ! isset($this->_headers['From']))
 		{
 			$this->_set_error_message('lang:email_no_from');

@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -48,6 +48,7 @@ use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Notifications\Notifiable;
+use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 
 defined('BASEPATH') || exit('No direct script access allowed');
 
@@ -60,8 +61,7 @@ class User extends BaseModel implements AuthenticatableContract, AuthorizableCon
     use CanResetPassword;
     use MustVerifyEmail;
     use Notifiable;
-
-    protected $table = 'user';
+    use HasOneTimePasswords;
 
     /**
      * The timestamps for the model.
@@ -69,6 +69,8 @@ class User extends BaseModel implements AuthenticatableContract, AuthorizableCon
      * @var bool
      */
     public $timestamps = false;
+
+    protected $table = 'user';
 
     /**
      * {@inheritDoc}
@@ -94,7 +96,27 @@ class User extends BaseModel implements AuthenticatableContract, AuthorizableCon
         'email_verified_at'    => 'datetime',
         'telegram_verified_at' => 'datetime',
         'akses_wilayah'        => 'json',
+        'two_factor_enabled'   => 'boolean',
     ];
+
+    public static function deleteFile($model, ?string $file, $deleting = false): void
+    {
+        if ($model->isDirty($file) || $deleting) {
+            $fotoSedang = LOKASI_USER_PICT . 'sedang_' . $model->getOriginal($file);
+            $fotoKecil  = LOKASI_USER_PICT . 'kecil_' . $model->getOriginal($file);
+            if (file_exists($fotoSedang)) {
+                unlink($fotoSedang);
+            }
+            if (file_exists($fotoKecil)) {
+                unlink($fotoKecil);
+            }
+        }
+    }
+
+    public static function syaratSandi(string $password): bool
+    {
+        return (bool) (preg_match('/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?!.*\s).{8,20}$/', $password));
+    }
 
     protected static function boot()
     {
@@ -110,29 +132,19 @@ class User extends BaseModel implements AuthenticatableContract, AuthorizableCon
     }
 
     /**
-     * Send the password reset notification.
-     *
-     * @param string $token
-     *
-     * @return void
+     * {@inheritDoc}
      */
-    public function sendPasswordResetNotification($token)
+    public function sendPasswordResetNotification($token): void
     {
         $this->notify(new \App\Notifications\Admin\ResetPasswordNotification($token));
     }
 
-    public static function deleteFile($model, ?string $file, $deleting = false): void
+    /**
+     * {@inheritDoc}
+     */
+    public function sendEmailVerificationNotification(): void
     {
-        if ($model->isDirty($file) || $deleting) {
-            $fotoSedang = LOKASI_USER_PICT . 'sedang_' . $model->getOriginal($file);
-            $fotoKecil  = LOKASI_USER_PICT . 'kecil_' . $model->getOriginal($file);
-            if (file_exists($fotoSedang)) {
-                unlink($fotoSedang);
-            }
-            if (file_exists($fotoKecil)) {
-                unlink($fotoKecil);
-            }
-        }
+        $this->notify(new \App\Notifications\Admin\VerifyEmailNotification());
     }
 
     public function getJWTIdentifier(): void

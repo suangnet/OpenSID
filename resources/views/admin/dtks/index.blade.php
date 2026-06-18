@@ -4,7 +4,7 @@
 
 @section('title')
     <h1>
-        Data Terpadu Kesejahteran Sosial {{ \App\Enums\Dtks\DtksEnum::VERSION_LIST[\App\Enums\Dtks\DtksEnum::VERSION_CODE] }}
+        {{ setting('sebutan_dtks') }}
     </h1>
 @endsection
 
@@ -45,7 +45,7 @@
                             <th>NIK</th>
                             <th nowrap>Nama</th>
                             <th>Jumlah<br>Keluarga</th>
-                            <th kolom="5">{{ ucwords($setting->sebutan_dusun) }}</th>
+                            <th kolom="5">{{ ucwords(setting('sebutan_dusun')) }}</th>
                             <th>RW</th>
                             <th>RT</th>
                             <th>NIK</th>

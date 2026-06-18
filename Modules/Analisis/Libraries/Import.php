@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -67,15 +67,15 @@ class Import
                     break;
 
                 case 'pertanyaan':
-                    $this->impor_pertanyaan($sheet, $id_master);
+                    $this->imporPertanyaan($sheet, $id_master);
                     break;
 
                 case 'jawaban':
-                    $this->impor_jawaban($sheet, $id_master);
+                    $this->imporJawaban($sheet, $id_master);
                     break;
 
                 case 'klasifikasi':
-                    $this->impor_klasifikasi($sheet, $id_master);
+                    $this->imporKlasifikasi($sheet, $id_master);
                     break;
 
                 default:
@@ -137,7 +137,7 @@ class Import
         return $analisisMaster->id;
     }
 
-    private function impor_pertanyaan($sheet, $id_master)
+    private function imporPertanyaan($sheet, $id_master)
     {
         foreach ($sheet->getRowIterator() as $index => $row) {
             if ($index == 1) {
@@ -149,7 +149,7 @@ class Import
             $indikator['id_master']   = $id_master;
             $indikator['nomor']       = $cells[0]->getValue();
             $indikator['pertanyaan']  = $cells[1]->getValue();
-            $indikator['id_kategori'] = $this->get_id_kategori($cells[2]->getValue(), $id_master);
+            $indikator['id_kategori'] = $this->getIdKategori($cells[2]->getValue(), $id_master);
             $indikator['id_tipe']     = $cells[3]->getValue();
             $indikator['config_id']   = identitas('id');
             if (! empty($cells[4]) && $cells[4]->getValue()) {
@@ -163,14 +163,14 @@ class Import
         }
     }
 
-    private function get_id_kategori($kategori, $id_master)
+    private function getIdKategori($kategori, $id_master)
     {
         $adaKategori = AnalisisKategori::firstOrCreate(['kategori' => $kategori, 'id_master' => $id_master]);
 
         return $adaKategori->id;
     }
 
-    private function impor_jawaban($sheet, $id_master)
+    private function imporJawaban($sheet, $id_master)
     {
         foreach ($sheet->getRowIterator() as $index => $row) {
             if ($index == 1) {
@@ -179,7 +179,7 @@ class Import
             $cells = $row->getCells();
             // Tambahkan parameter
             $parameter                 = [];
-            $parameter['id_indikator'] = $this->get_id_indikator($cells[0]->getValue(), $id_master);
+            $parameter['id_indikator'] = $this->getIdIndikator($cells[0]->getValue(), $id_master);
             $parameter['jawaban']      = $cells[2]->getValue();
             $parameter['config_id']    = identitas('id');
             if (! empty($cells[1]) && $cells[1]->getValue()) {
@@ -192,12 +192,12 @@ class Import
         }
     }
 
-    private function get_id_indikator($kode_pertanyaan, $id_master)
+    private function getIdIndikator($kode_pertanyaan, $id_master)
     {
         return AnalisisIndikator::where(['id_master' => $id_master, 'nomor' => $kode_pertanyaan])->first()?->id;
     }
 
-    private function impor_klasifikasi($sheet, $id_master)
+    private function imporKlasifikasi($sheet, $id_master)
     {
         foreach ($sheet->getRowIterator() as $index => $row) {
             if ($index == 1) {

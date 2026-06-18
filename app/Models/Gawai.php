@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -39,6 +39,7 @@ namespace App\Models;
 
 use App\Traits\Author;
 use App\Traits\ConfigId;
+use App\Traits\StatusTrait;
 use Illuminate\Database\Eloquent\Builder;
 
 defined('BASEPATH') || exit('No direct script access allowed');
@@ -47,9 +48,12 @@ class Gawai extends BaseModel
 {
     use Author;
     use ConfigId;
+    use StatusTrait;
 
     public const ANJUNGAN = 1;
     public const GAWAI    = 2;
+
+    public $statusColumName = 'status';
 
     /**
      * The table associated with the model.
@@ -69,6 +73,7 @@ class Gawai extends BaseModel
         'id_pengunjung',
         'keterangan',
         'status',
+        'permohonan_surat_tanpa_akun',
         'status_alasan',
         'tipe',
         'printer_ip',
@@ -76,6 +81,7 @@ class Gawai extends BaseModel
         'keyboard',
         'created_by',
         'updated_by',
+        'status',
     ];
 
     /**
@@ -108,6 +114,16 @@ class Gawai extends BaseModel
     ];
 
     /**
+     * Apply a global scope to only include active status.
+     */
+    protected static function booted()
+    {
+        static::addGlobalScope('tipe', static function (Builder $builder): void {
+            $builder->where('tipe', self::GAWAI);
+        });
+    }
+
+    /**
      * Define a one-to-one relationship.
      *
      * @return \Illuminate\Database\Eloquent\Relations\hasOne
@@ -125,15 +141,5 @@ class Gawai extends BaseModel
     public function updatedBy()
     {
         return $this->hasOne(User::class, 'id', 'updated_by');
-    }
-
-    /**
-     * Apply a global scope to only include active status.
-     */
-    protected static function booted()
-    {
-        static::addGlobalScope('tipe', static function (Builder $builder): void {
-            $builder->where('tipe', self::GAWAI);
-        });
     }
 }

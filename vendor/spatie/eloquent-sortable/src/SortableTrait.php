@@ -44,8 +44,8 @@ trait SortableTrait
     public static function setNewOrder(
         $ids,
         int $startOrder = 1,
-        string $primaryKeyColumn = null,
-        callable $modifyQuery = null
+        ?string $primaryKeyColumn = null,
+        ?callable $modifyQuery = null
     ): void {
         if (! is_array($ids) && ! $ids instanceof ArrayAccess) {
             throw new InvalidArgumentException('You must pass an array or ArrayAccess object to setNewOrder');
@@ -95,6 +95,34 @@ trait SortableTrait
     public function shouldSortWhenCreating(): bool
     {
         return $this->sortable['sort_when_creating'] ?? config('eloquent-sortable.sort_when_creating', true);
+    }
+
+    public function moveAfter(Sortable $model): void
+    {
+        $orderColumnName = $this->determineOrderColumnName();
+
+        $this->buildSortQuery()
+            ->ordered()
+            ->where($orderColumnName, '>', $model->$orderColumnName)
+            ->increment($orderColumnName);
+
+        $this->$orderColumnName = $model->$orderColumnName + 1;
+
+        $this->saveQuietly();
+    }
+
+    public function moveBefore(Sortable $model): void
+    {
+        $orderColumnName = $this->determineOrderColumnName();
+
+        $this->buildSortQuery()
+            ->ordered()
+            ->where($orderColumnName, '>=', $model->$orderColumnName)
+            ->increment($orderColumnName);
+
+        $this->$orderColumnName = $model->$orderColumnName;
+
+        $this->saveQuietly();
     }
 
     public function moveOrderDown(): static

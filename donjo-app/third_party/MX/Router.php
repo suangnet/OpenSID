@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -55,79 +55,6 @@ class MX_Router extends CI_Router
     public function fetch_module()
     {
         return $this->module;
-    }
-
-    /**
-     * [_set_request description]
-     *
-     * @method _set_request
-     *
-     * @param array $segments [description]
-     */
-    protected function _set_request($segments = [])
-    {
-        if ($this->translate_uri_dashes === true) {
-            foreach (range(0, 2) as $v) {
-                if (isset($segments[$v])) {
-                    $segments[$v] = str_replace('-', '_', $segments[$v]);
-                }
-            }
-        }
-
-        $segments = $this->locate($segments);
-
-        if ($this->located == -1) {
-            $this->_set_404override_controller();
-
-            return;
-        }
-
-        if (empty($segments)) {
-            $this->_set_default_controller();
-
-            return;
-        }
-
-        $this->set_class($segments[0]);
-
-        if (isset($segments[1])) {
-            $this->set_method($segments[1]);
-        } else {
-            $segments[1] = 'index';
-        }
-
-        array_unshift($segments, null);
-        unset($segments[0]);
-        $this->uri->rsegments = $segments;
-    }
-
-    /**
-     * [_set_404override_controller description]
-     *
-     * @method _set_404override_controller
-     */
-    protected function _set_404override_controller()
-    {
-        $this->_set_module_path($this->routes['404_override']);
-    }
-
-    /**
-     * [_set_default_controller description]
-     *
-     * @method _set_default_controller
-     */
-    protected function _set_default_controller()
-    {
-        if (empty($this->directory)) {
-            // set the default controller module path
-            $this->_set_module_path($this->default_controller);
-        }
-
-        parent::_set_default_controller();
-
-        if (empty($this->class)) {
-            $this->_set_404override_controller();
-        }
     }
 
     /**
@@ -233,6 +160,97 @@ class MX_Router extends CI_Router
     }
 
     /**
+     * [set_class description]
+     *
+     * @method set_class
+     *
+     * @param [type]    $class [description]
+     */
+    public function set_class($class): void
+    {
+        $suffix = $this->config->item('controller_suffix');
+        // Fixing Error Message: strpos(): Non-string needles will be interpreted as strings in the future.
+        // Use an explicit chr() call to preserve the current behavior.
+        if ($suffix && strpos($class, (string) $suffix) === false) {
+            $class .= $suffix;
+        }
+        parent::set_class($class);
+    }
+
+    /**
+     * [_set_request description]
+     *
+     * @method _set_request
+     *
+     * @param array $segments [description]
+     */
+    protected function _set_request($segments = [])
+    {
+        if ($this->translate_uri_dashes === true) {
+            foreach (range(0, 2) as $v) {
+                if (isset($segments[$v])) {
+                    $segments[$v] = str_replace('-', '_', $segments[$v]);
+                }
+            }
+        }
+
+        $segments = $this->locate($segments);
+
+        if ($this->located == -1) {
+            $this->_set_404override_controller();
+
+            return;
+        }
+
+        if (empty($segments)) {
+            $this->_set_default_controller();
+
+            return;
+        }
+
+        $this->set_class($segments[0]);
+
+        if (isset($segments[1])) {
+            $this->set_method($segments[1]);
+        } else {
+            $segments[1] = 'index';
+        }
+
+        array_unshift($segments, null);
+        unset($segments[0]);
+        $this->uri->rsegments = $segments;
+    }
+
+    /**
+     * [_set_404override_controller description]
+     *
+     * @method _set_404override_controller
+     */
+    protected function _set_404override_controller()
+    {
+        $this->_set_module_path($this->routes['404_override']);
+    }
+
+    /**
+     * [_set_default_controller description]
+     *
+     * @method _set_default_controller
+     */
+    protected function _set_default_controller()
+    {
+        if (empty($this->directory)) {
+            // set the default controller module path
+            $this->_set_module_path($this->default_controller);
+        }
+
+        parent::_set_default_controller();
+
+        if (empty($this->class)) {
+            $this->_set_404override_controller();
+        }
+    }
+
+    /**
      * [set module path]
      *
      * @method _set_module_path
@@ -263,23 +281,5 @@ class MX_Router extends CI_Router
                 }
             }
         }
-    }
-
-    /**
-     * [set_class description]
-     *
-     * @method set_class
-     *
-     * @param [type]    $class [description]
-     */
-    public function set_class($class): void
-    {
-        $suffix = $this->config->item('controller_suffix');
-        // Fixing Error Message: strpos(): Non-string needles will be interpreted as strings in the future.
-        // Use an explicit chr() call to preserve the current behavior.
-        if ($suffix && strpos($class, (string) $suffix) === false) {
-            $class .= $suffix;
-        }
-        parent::set_class($class);
     }
 }

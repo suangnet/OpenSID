@@ -12,6 +12,15 @@
 - Solusi untuk {perbaikan|fitur baru} terkait issue {dst} 
 -->
 
+## Pull Request Terkait
+<!---  Sebutkan PR penyebab masalah (jika ada): # -->
+
+## Author
+<!---  Dibuat oleh: @username # -->
+
+## Reviewer
+<!---  Direview oleh: @reviewer -->
+
 ## Langkah untuk mereproduksi (Steps to Reproduce)
 <!--- Jelaskan langkah-langkah yang diperlukan untuk mereproduksi masalah atau bug yang diperbaiki -->
 <!--- Misalnya: 

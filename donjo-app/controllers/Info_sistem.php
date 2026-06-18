@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,18 +29,19 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
  */
 
 use App\Libraries\Checker;
+use App\Libraries\LogViewer;
 use App\Libraries\Sistem;
+use App\Models\Activity;
 use App\Models\Area;
 use App\Models\Artikel;
 use App\Models\BantuanPeserta;
-use App\Models\BukuTamu;
 use App\Models\Config;
 use App\Models\Dokumen;
 use App\Models\DtksLampiran;
@@ -48,7 +49,6 @@ use App\Models\Galery;
 use App\Models\Garis;
 use App\Models\KelompokAnggota;
 use App\Models\LaporanSinkronisasi;
-use App\Models\LogLogin;
 use App\Models\LogPenduduk;
 use App\Models\Lokasi;
 use App\Models\MediaSosial;
@@ -58,14 +58,15 @@ use App\Models\Penduduk;
 use App\Models\PendudukMandiri;
 use App\Models\Pengaduan;
 use App\Models\Point;
-use App\Models\Produk;
-use App\Models\SettingAplikasi;
 use App\Models\Simbol;
 use App\Models\SinergiProgram;
 use App\Models\Widget;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use League\Flysystem\PathTraversalDetected;
 use Modules\Analisis\Models\AnalisisResponBukti;
 use Modules\Anjungan\Models\AnjunganMenu;
+use Modules\BukuTamu\Models\TamuModel;
 
 defined('BASEPATH') || exit('No direct script access allowed');
 
@@ -83,10 +84,17 @@ class Info_sistem extends Admin_Controller
 
     public function index()
     {
-        // Logs viewer
-        $this->load->library('Log_Viewer');
+        $peristiwaLog = Activity::select('event')->distinct()->get()->pluck('event', 'event')
+            ->map(static function ($event) {
+                return match ($event) {
+                    'created' => 'Dibuat',
+                    'updated' => 'Diubah',
+                    'deleted' => 'Dihapus',
+                    default   => $event,
+                };
+        });
 
-        $data                      = $this->log_viewer->showLogs();
+        $data                      = (new LogViewer())->showLogs();
         $data['ekstensi']          = Sistem::cekEkstensi();
         $data['kebutuhan_sistem']  = Sistem::cekKebutuhanSistem();
         $data['php']               = Sistem::cekPhp();
@@ -94,8 +102,10 @@ class Info_sistem extends Admin_Controller
         $data['disable_functions'] = Sistem::disableFunctions();
         $data['check_permission']  = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? 0 : 1;
         $data['controller']        = $this->controller;
-        // $data['total_space']       = $this->convertDisk(disk_total_space('/'));
-        $data['disk'] = false;
+        $data['nama_log']          = Activity::select('log_name')->distinct()->get()->pluck('log_name');
+        $data['peristiwa_log']     = $peristiwaLog;
+        $data['pengguna_log']      = Activity::select('causer_type', 'causer_id')->distinct()->has('causer')->with('causer')->get()->pluck('causer.nama', 'causer_id');
+        $data['disk']              = false;
 
         return view('admin.setting.info_sistem.index', $data);
     }
@@ -126,7 +136,7 @@ class Info_sistem extends Admin_Controller
 
         cache()->flush();
 
-        redirect_with('success', 'Berhasil Hapus Cache');
+        redirect_with('success', 'Berhasil Hapus Cache', ci_route('info_sistem#optimasi'));
     }
 
     public function cache_blade(): void
@@ -135,53 +145,128 @@ class Info_sistem extends Admin_Controller
 
         kosongkanFolder('storage/framework/views/');
 
-        redirect_with('success', 'Berhasil Hapus Cache');
+        redirect_with('success', 'Berhasil Hapus Cache', ci_route('info_sistem#optimasi'));
     }
 
-    public function set_permission_desa(): void
+    public function set_permission_desa()
     {
         isCan('u');
 
-        $dirs   = $_POST['folders'];
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            return $this->output
+                ->set_status_header(400)
+                ->set_content_type('application/json')
+                ->set_output(json_encode([
+                    'status'  => 0,
+                    'message' => 'Fungsi ubah permission folder tidak tersedia di Windows',
+                ], JSON_THROW_ON_ERROR));
+        }
+
+        $disk   = Storage::disk('desa');
+        $dirs   = $this->input->post('folders');
         $error  = [];
         $result = ['status' => 1, 'message' => 'Berhasil ubah permission folder desa'];
 
         foreach ($dirs as $dir) {
-            if (! chmod($dir, DESAPATHPERMISSION)) {
-                $error[] = 'Gagal mengubah hak akses folder ' . $dir;
+            $check = str_replace('\\', '/', trim($dir));
+            $check = preg_replace('/^desa\//', '', $check);
+
+            try {
+                if (! $disk->exists($check)) {
+                    $error[] = "Folder tidak ditemukan: {$check}";
+
+                    continue;
+                }
+
+                if (! chmod($dir, DESAPATHPERMISSION)) {
+                    $error[] = "Gagal mengubah hak akses folder: {$dir}";
+                }
+
+            } catch (PathTraversalDetected $e) {
+                logger()->error($e);
+                $error[] = "Path tidak valid: {$dir}";
+
+                continue;
             }
         }
 
-        if ($error !== []) {
+        if (! empty($error)) {
             $result['status']  = 0;
-            $result['message'] = implode('<br />', $error);
+            $result['message'] = implode('<br>', $error);
         }
 
-        status_sukses(true);
-        $this->output
+        return $this->output
+            ->set_status_header($result['status'] ? 200 : 400)
             ->set_content_type('application/json')
             ->set_output(json_encode($result, JSON_THROW_ON_ERROR));
     }
 
-    public function datatables()
+    public function datatablesLogAktifitas()
     {
         if ($this->input->is_ajax_request()) {
-            return datatables()->of(LogLogin::query())
-                ->addIndexColumn()
-                ->editColumn('lainnya', static function ($q) {
-                    if (! $q->lainnya) return '<label class="label label-danger">Tidak ada data</label>';
-                    $info = [];
 
-                    foreach ($q->lainnya as $key => $value) {
-                        if ($value) {
-                            $info[] = '<div><label class="label label-success">' . $key . ' : ' . $value . '</label></div>';
-                        }
+            $query = Activity::with([
+                'causer' => static function ($morphTo) {
+                    $morphTo->morphWith([
+                        App\Models\User::class => ['userGrup'],
+                    ]);
+                },
+            ])
+                ->when($this->input->get('log_name'), static function ($query, $log_name) {
+                    $query->where('log_name', $log_name);
+                })
+                ->when($this->input->get('log_event'), static function ($query, $event) {
+                    $query->where('event', $event);
+                })
+                ->when($this->input->get('username'), static function ($query, $username) {
+                    $query->where('causer_id', $username);
+                });
+
+            return datatables()->of($query)
+                ->addIndexColumn()
+                ->addColumn('aksi', static function ($row) {
+                    $aksi = '';
+
+                    $aksi .= "<button data-id='{$row->id}' type='button' class='btn bg-info btn-sm btn-detail-log' title='Lihat'><i class='fa fa-eye fa-sm'></i></button> ";
+
+                    return $aksi;
+                })
+                ->addColumn('username', static function ($row) {
+                    $user = $row->causer;
+
+                    if (! $user) {
+                        return '-';
                     }
 
-                    return implode('', $info);
+                    $username = $user->nama ?? 'Unknown';
+                    $userGrup = $user?->userGrup?->nama ?? 'Tanpa Grup';
+
+                    return "{$username} ({$userGrup})";
+                })
+                ->filterColumn('username', static function ($query, $keyword) {
+                    $query->whereHasMorph(
+                        'causer',
+                        [App\Models\User::class],
+                        static function ($q) use ($keyword) {
+                            $q->where('nama', 'like', "%{$keyword}%")
+                                ->orWhere('username', 'like', "%{$keyword}%")
+                                ->orWhereHas('userGrup', static function ($grup) use ($keyword) {
+                                    $grup->where('nama', 'like', "%{$keyword}%");
+                                });
+                        }
+                    );
+                })
+                ->orderColumn('username', static function ($query, $order) {
+                    $query->whereHasMorph(
+                        'causer',
+                        [App\Models\User::class],
+                        static function ($q) use ($order) {
+                            $q->orderBy('nama', $order);
+                        }
+                    );
                 })
                 ->editColumn('created_at', static fn ($row) => tgl_indo2($row->created_at))
-                ->rawColumns(['lainnya'])
+                ->rawColumns(['aksi'])
                 ->make();
         }
 
@@ -191,52 +276,6 @@ class Info_sistem extends Admin_Controller
     public function fileDesa()
     {
         view('admin.setting.info_sistem.file_desa', ['files' => $this->listInvalidFile()]);
-    }
-
-    private function listInvalidFile()
-    {
-        $appKey             = get_app_key();
-        $excludeFilePattern = '/\.(php|htaccess|html|css)|app_key|favicon.ico|latar_login.jpg|latar_login_mandiri.jpg$/'; // Pattern: ends with .php, .htaccess, or .html
-        $excludeDirectory   = [LOKASI_FONT_DESA];
-        // Define the directory to scan
-        $directoryList = [DESAPATH . 'logo', DESAPATH . 'upload', DESAPATH . 'pengaturan'];
-        // Initialize an associative array to hold matching files grouped by directory
-        $groupedFiles = [];
-
-        foreach ($directoryList as $directory) {
-            // Create a recursive directory iterator
-            $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
-
-            // Loop through each file in the directory and subdirectories
-            foreach ($iterator as $file) {
-                // Get the directory path
-                $dirPath = $file->getPath();
-                if ($excludeDirectory) {
-                    // Skip if dirPath starts with any of the excluded directories
-                    foreach ($excludeDirectory as $excludedDir) {
-                        if (Str::contains($dirPath . '/', $excludedDir)) {
-                            continue 2; // Skip to the next iteration of the outer loop
-                        }
-                    }
-                }
-                // Check if the current item is a file (not a directory)
-                if ($file->isFile()) {
-                    // Get the filename
-                    $filename = $file->getFilename();
-                    if (preg_match($excludeFilePattern, $filename)) continue;
-
-                    if (! (new Checker($appKey, $filename))->isValid()) {
-                        // Group files by directory
-                        if (! isset($groupedFiles[$dirPath])) {
-                            $groupedFiles[$dirPath] = []; // Initialize an array for this directory
-                        }
-                        $groupedFiles[$dirPath][] = $filename; // Add the matching file to the directory's array
-                    }
-                }
-            }
-        }
-
-        return $groupedFiles;
     }
 
     public function perbaikiFileDesa()
@@ -252,7 +291,7 @@ class Info_sistem extends Admin_Controller
             LOKASI_FOTO_LEMBAGA   => [KelompokAnggota::class => ['foto']],
             LOKASI_GALERI         => [PembangunanDokumentasi::class => ['gambar'], Galery::class => ['gambar'], Pembangunan::class => ['foto']],
             LOKASI_FOTO_ARTIKEL   => [Artikel::class => ['gambar', 'gambar1', 'gambar2', 'gambar3']],
-            LOKASI_FOTO_BUKU_TAMU => [BukuTamu::class => ['foto']],
+            LOKASI_FOTO_BUKU_TAMU => [TamuModel::class => ['foto']],
             LOKASI_FOTO_LOKASI    => [Lokasi::class => ['foto']],
             LOKASI_FOTO_AREA      => [Area::class => ['foto']],
             LOKASI_FOTO_GARIS     => [Garis::class => ['foto']],
@@ -336,5 +375,51 @@ class Info_sistem extends Admin_Controller
             }
         cache()->flush();
         redirect_with('success', 'File tidak valid telah diperbaiki');
+    }
+
+    private function listInvalidFile()
+    {
+        $appKey             = get_app_key();
+        $excludeFilePattern = '/\.(php|htaccess|html|css)|app_key|favicon.ico|latar_login.jpg|latar_login_mandiri.jpg$/'; // Pattern: ends with .php, .htaccess, or .html
+        $excludeDirectory   = [LOKASI_FONT_DESA];
+        // Define the directory to scan
+        $directoryList = [DESAPATH . 'logo', DESAPATH . 'upload', DESAPATH . 'pengaturan'];
+        // Initialize an associative array to hold matching files grouped by directory
+        $groupedFiles = [];
+
+        foreach ($directoryList as $directory) {
+            // Create a recursive directory iterator
+            $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
+
+            // Loop through each file in the directory and subdirectories
+            foreach ($iterator as $file) {
+                // Get the directory path
+                $dirPath = $file->getPath();
+                if ($excludeDirectory) {
+                    // Skip if dirPath starts with any of the excluded directories
+                    foreach ($excludeDirectory as $excludedDir) {
+                        if (Str::contains($dirPath . '/', $excludedDir)) {
+                            continue 2; // Skip to the next iteration of the outer loop
+                        }
+                    }
+                }
+                // Check if the current item is a file (not a directory)
+                if ($file->isFile()) {
+                    // Get the filename
+                    $filename = $file->getFilename();
+                    if (preg_match($excludeFilePattern, $filename)) continue;
+
+                    if (! (new Checker($appKey, $filename))->isValid()) {
+                        // Group files by directory
+                        if (! isset($groupedFiles[$dirPath])) {
+                            $groupedFiles[$dirPath] = []; // Initialize an array for this directory
+                        }
+                        $groupedFiles[$dirPath][] = $filename; // Add the matching file to the directory's array
+                    }
+                }
+            }
+        }
+
+        return $groupedFiles;
     }
 }

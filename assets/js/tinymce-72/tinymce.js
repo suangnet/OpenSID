@@ -1,5 +1,5 @@
 /**
- * TinyMCE version 7.5.1 (TBD)
+ * TinyMCE version 7.7.2 (2025-03-19)
  */
 
 (function () {
@@ -1178,7 +1178,7 @@
         throw new Error('Attribute value was not simple');
       }
     };
-    const set$3 = (element, key, value) => {
+    const set$4 = (element, key, value) => {
       rawSet(element.dom, key, value);
     };
     const setAll$1 = (element, attrs) => {
@@ -1215,13 +1215,13 @@
     const add$4 = (element, attr, id) => {
       const old = read$4(element, attr);
       const nu = old.concat([id]);
-      set$3(element, attr, nu.join(' '));
+      set$4(element, attr, nu.join(' '));
       return true;
     };
     const remove$8 = (element, attr, id) => {
       const nu = filter$5(read$4(element, attr), v => v !== id);
       if (nu.length > 0) {
-        set$3(element, attr, nu.join(' '));
+        set$4(element, attr, nu.join(' '));
       } else {
         remove$9(element, attr);
       }
@@ -1508,6 +1508,9 @@
       }
     };
     const getRaw$1 = element => element.dom.contentEditable;
+    const set$3 = (element, editable) => {
+      element.dom.contentEditable = editable ? 'true' : 'false';
+    };
 
     const isSupported = dom => dom.style !== undefined && isFunction(dom.style.getPropertyValue);
 
@@ -1996,6 +1999,7 @@
     const isImg = matchNodeName('img');
     const isContentEditableTrue$3 = hasContentEditableState('true');
     const isContentEditableFalse$b = hasContentEditableState('false');
+    const isEditingHost = node => isHTMLElement(node) && node.isContentEditable && isNonNullable(node.parentElement) && !node.parentElement.isContentEditable;
     const isTableCell$3 = matchNodeNames([
       'td',
       'th'
@@ -2426,16 +2430,16 @@
           id: state.id
         });
         if (settings.contentCssCors) {
-          set$3(linkElem, 'crossOrigin', 'anonymous');
+          set$4(linkElem, 'crossOrigin', 'anonymous');
         }
         if (settings.referrerPolicy) {
-          set$3(linkElem, 'referrerpolicy', settings.referrerPolicy);
+          set$4(linkElem, 'referrerpolicy', settings.referrerPolicy);
         }
         link = linkElem.dom;
         link.onload = passed;
         link.onerror = failed;
         addStyle(linkElem);
-        set$3(linkElem, 'href', urlWithSuffix);
+        set$4(linkElem, 'href', urlWithSuffix);
       });
       const loadRawCss = (key, css) => {
         const state = getOrCreateState(key);
@@ -2443,9 +2447,10 @@
         state.count++;
         const styleElem = SugarElement.fromTag('style', doc.dom);
         setAll$1(styleElem, {
-          rel: 'stylesheet',
-          type: 'text/css',
-          id: state.id
+          'rel': 'stylesheet',
+          'type': 'text/css',
+          'id': state.id,
+          'data-mce-key': key
         });
         styleElem.dom.innerHTML = css;
         addStyle(styleElem);
@@ -4063,7 +4068,7 @@
           delete this.events[id];
           try {
             delete target[this.expando];
-          } catch (ex) {
+          } catch (_a) {
             target[this.expando] = null;
           }
         }
@@ -4148,7 +4153,7 @@
       if (isNullable(value) || value === '') {
         remove$9(elm, name);
       } else {
-        set$3(elm, name, value);
+        set$4(elm, name, value);
       }
     };
     const camelCaseToHyphens = name => name.replace(/[A-Z]/g, v => '-' + v.toLowerCase());
@@ -5356,7 +5361,7 @@
       const toggleActiveAttr = (uid, state) => {
         each$e(findMarkers(editor, uid), elem => {
           if (state) {
-            set$3(elem, dataAnnotationActive(), 'true');
+            set$4(elem, dataAnnotationActive(), 'true');
           } else {
             remove$9(elem, dataAnnotationActive());
           }
@@ -5655,7 +5660,7 @@
     };
     const createPaddingBr = () => {
       const br = SugarElement.fromTag('br');
-      set$3(br, 'data-mce-bogus', '1');
+      set$4(br, 'data-mce-bogus', '1');
       return br;
     };
     const fillWithPaddingBr = elm => {
@@ -6826,6 +6831,90 @@
       };
     };
 
+    const firePreProcess = (editor, args) => editor.dispatch('PreProcess', args);
+    const firePostProcess = (editor, args) => editor.dispatch('PostProcess', args);
+    const fireRemove = editor => {
+      editor.dispatch('remove');
+    };
+    const fireDetach = editor => {
+      editor.dispatch('detach');
+    };
+    const fireSwitchMode = (editor, mode) => {
+      editor.dispatch('SwitchMode', { mode });
+    };
+    const fireObjectResizeStart = (editor, target, width, height, origin) => {
+      editor.dispatch('ObjectResizeStart', {
+        target,
+        width,
+        height,
+        origin
+      });
+    };
+    const fireObjectResized = (editor, target, width, height, origin) => {
+      editor.dispatch('ObjectResized', {
+        target,
+        width,
+        height,
+        origin
+      });
+    };
+    const firePreInit = editor => {
+      editor.dispatch('PreInit');
+    };
+    const firePostRender = editor => {
+      editor.dispatch('PostRender');
+    };
+    const fireInit = editor => {
+      editor.dispatch('Init');
+    };
+    const firePlaceholderToggle = (editor, state) => {
+      editor.dispatch('PlaceholderToggle', { state });
+    };
+    const fireError = (editor, errorType, error) => {
+      editor.dispatch(errorType, error);
+    };
+    const fireFormatApply = (editor, format, node, vars) => {
+      editor.dispatch('FormatApply', {
+        format,
+        node,
+        vars
+      });
+    };
+    const fireFormatRemove = (editor, format, node, vars) => {
+      editor.dispatch('FormatRemove', {
+        format,
+        node,
+        vars
+      });
+    };
+    const fireBeforeSetContent = (editor, args) => editor.dispatch('BeforeSetContent', args);
+    const fireSetContent = (editor, args) => editor.dispatch('SetContent', args);
+    const fireBeforeGetContent = (editor, args) => editor.dispatch('BeforeGetContent', args);
+    const fireGetContent = (editor, args) => editor.dispatch('GetContent', args);
+    const fireAutocompleterStart = (editor, args) => {
+      editor.dispatch('AutocompleterStart', args);
+    };
+    const fireAutocompleterUpdate = (editor, args) => {
+      editor.dispatch('AutocompleterUpdate', args);
+    };
+    const fireAutocompleterUpdateActiveRange = (editor, args) => {
+      editor.dispatch('AutocompleterUpdateActiveRange', args);
+    };
+    const fireAutocompleterEnd = editor => {
+      editor.dispatch('AutocompleterEnd');
+    };
+    const firePastePreProcess = (editor, html, internal) => editor.dispatch('PastePreProcess', {
+      content: html,
+      internal
+    });
+    const firePastePostProcess = (editor, node, internal) => editor.dispatch('PastePostProcess', {
+      node,
+      internal
+    });
+    const firePastePlainTextToggle = (editor, state) => editor.dispatch('PastePlainTextToggle', { state });
+    const fireEditableRootStateChange = (editor, state) => editor.dispatch('EditableRootStateChange', { state });
+    const fireDisabledStateChange = (editor, state) => editor.dispatch('DisabledStateChange', { state });
+
     const deviceDetection$1 = detect$1().deviceType;
     const isTouch = deviceDetection$1.isTouch();
     const DOM$a = DOMUtils.DOM;
@@ -7219,6 +7308,26 @@
         processor: 'boolean',
         default: false
       });
+      registerOption('disabled', {
+        processor: value => {
+          if (isBoolean(value)) {
+            if (editor.initialized && isDisabled$1(editor) !== value) {
+              Promise.resolve().then(() => {
+                fireDisabledStateChange(editor, value);
+              });
+            }
+            return {
+              valid: true,
+              value
+            };
+          }
+          return {
+            valid: false,
+            message: 'The value must be a boolean.'
+          };
+        },
+        default: false
+      });
       registerOption('readonly', {
         processor: 'boolean',
         default: false
@@ -7256,7 +7365,7 @@
       });
       registerOption('iframe_aria_text', {
         processor: 'string',
-        default: 'Rich Text Area. Press ALT-0 for help.'
+        default: 'Rich Text Area'.concat(editor.hasPlugin('help') ? '. Press ALT-0 for help.' : '')
       });
       registerOption('setup', { processor: 'function' });
       registerOption('init_instance_callback', { processor: 'function' });
@@ -7738,6 +7847,7 @@
     const shouldConvertUnsafeEmbeds = option('convert_unsafe_embeds');
     const getLicenseKey = option('license_key');
     const getApiKey = option('api_key');
+    const isDisabled$1 = option('disabled');
 
     const isElement$3 = isElement$6;
     const isText$5 = isText$b;
@@ -7967,8 +8077,8 @@
     const isElement$2 = isElement$6;
     const isText$4 = isText$b;
     const isCaretCandidate$1 = isCaretCandidate$3;
-    const isForwards = direction => direction > 0;
-    const isBackwards = direction => direction < 0;
+    const isForwards = direction => direction === 1;
+    const isBackwards = direction => direction === -1;
     const skipCaretContainers = (walk, shallow) => {
       let node;
       while (node = walk(shallow)) {
@@ -8181,11 +8291,6 @@
       return inSameBlock;
     };
 
-    var HDirection;
-    (function (HDirection) {
-      HDirection[HDirection['Backwards'] = -1] = 'Backwards';
-      HDirection[HDirection['Forwards'] = 1] = 'Forwards';
-    }(HDirection || (HDirection = {})));
     const isContentEditableFalse$6 = isContentEditableFalse$b;
     const isText$3 = isText$b;
     const isElement$1 = isElement$6;
@@ -8242,7 +8347,7 @@
           return CaretPosition.before(nextSibling);
         }
       } else {
-        return findCaretPosition$1(HDirection.Forwards, CaretPosition.after(nextNode), root);
+        return findCaretPosition$1(1, CaretPosition.after(nextNode), root);
       }
     };
     const findCaretPosition$1 = (direction, startPos, root) => {
@@ -8336,10 +8441,10 @@
     };
     const CaretWalker = root => ({
       next: caretPosition => {
-        return findCaretPosition$1(HDirection.Forwards, caretPosition, root);
+        return findCaretPosition$1(1, caretPosition, root);
       },
       prev: caretPosition => {
-        return findCaretPosition$1(HDirection.Backwards, caretPosition, root);
+        return findCaretPosition$1(-1, caretPosition, root);
       }
     });
 
@@ -9012,7 +9117,8 @@
     const findContent = (start, node, offset) => walkText(start, node, offset, isContent);
     const findWordEndPoint = (dom, body, container, offset, start, includeTrailingSpaces) => {
       let lastTextNode;
-      const rootNode = dom.getParent(container, dom.isBlock) || body;
+      const closestRoot = dom.getParent(container, node => isEditingHost(node) || dom.isBlock(node));
+      const rootNode = isNonNullable(closestRoot) ? closestRoot : body;
       const walk = (container, offset, pred) => {
         const textSeeker = TextSeeker(dom);
         const walker = start ? textSeeker.backwards : textSeeker.forwards;
@@ -9086,7 +9192,7 @@
         return isAtBlockBoundary$1(dom, root, parent, siblingName);
       }
     };
-    const findParentContainer = (dom, formatList, container, offset, start) => {
+    const findParentContainer = (dom, formatList, container, offset, start, expandToBlock) => {
       let parent = container;
       const siblingName = start ? 'previousSibling' : 'nextSibling';
       const root = dom.getRoot();
@@ -9096,8 +9202,11 @@
         }
       }
       while (parent) {
+        if (isEditingHost(parent)) {
+          return container;
+        }
         if (!formatList[0].block_expand && dom.isBlock(parent)) {
-          return parent;
+          return expandToBlock ? parent : container;
         }
         for (let sibling = parent[siblingName]; sibling; sibling = sibling[siblingName]) {
           const allowSpaces = isText$b(sibling) && !isAtBlockBoundary$1(dom, root, sibling, siblingName);
@@ -9114,7 +9223,10 @@
       return container;
     };
     const isSelfOrParentBookmark = container => isBookmarkNode(container.parentNode) || isBookmarkNode(container);
-    const expandRng = (dom, rng, formatList, includeTrailingSpace = false) => {
+    const expandRng = (dom, rng, formatList, expandOptions = {}) => {
+      const {includeTrailingSpace = false, expandToBlock = true} = expandOptions;
+      const editableHost = dom.getParent(rng.commonAncestorContainer, node => isEditingHost(node));
+      const root = isNonNullable(editableHost) ? editableHost : dom.getRoot();
       let {startContainer, startOffset, endContainer, endOffset} = rng;
       const format = formatList[0];
       if (isElement$6(startContainer) && startContainer.hasChildNodes()) {
@@ -9154,12 +9266,12 @@
         }
       }
       if (rng.collapsed) {
-        const startPoint = findWordEndPoint(dom, dom.getRoot(), startContainer, startOffset, true, includeTrailingSpace);
+        const startPoint = findWordEndPoint(dom, root, startContainer, startOffset, true, includeTrailingSpace);
         startPoint.each(({container, offset}) => {
           startContainer = container;
           startOffset = offset;
         });
-        const endPoint = findWordEndPoint(dom, dom.getRoot(), endContainer, endOffset, false, includeTrailingSpace);
+        const endPoint = findWordEndPoint(dom, root, endContainer, endOffset, false, includeTrailingSpace);
         endPoint.each(({container, offset}) => {
           endContainer = container;
           endOffset = offset;
@@ -9167,10 +9279,10 @@
       }
       if (isInlineFormat(format) || format.block_expand) {
         if (!isInlineFormat(format) || (!isText$b(startContainer) || startOffset === 0)) {
-          startContainer = findParentContainer(dom, formatList, startContainer, startOffset, true);
+          startContainer = findParentContainer(dom, formatList, startContainer, startOffset, true, expandToBlock);
         }
         if (!isInlineFormat(format) || (!isText$b(endContainer) || endOffset === endContainer.data.length)) {
-          endContainer = findParentContainer(dom, formatList, endContainer, endOffset, false);
+          endContainer = findParentContainer(dom, formatList, endContainer, endOffset, false, expandToBlock);
         }
       }
       if (shouldExpandToSelector(format)) {
@@ -9182,13 +9294,13 @@
         endContainer = findBlockEndPoint(dom, formatList, endContainer, 'nextSibling');
         if (isBlockFormat(format)) {
           if (!dom.isBlock(startContainer)) {
-            startContainer = findParentContainer(dom, formatList, startContainer, startOffset, true);
+            startContainer = findParentContainer(dom, formatList, startContainer, startOffset, true, expandToBlock);
             if (isText$b(startContainer)) {
               startOffset = 0;
             }
           }
           if (!dom.isBlock(endContainer)) {
-            endContainer = findParentContainer(dom, formatList, endContainer, endOffset, false);
+            endContainer = findParentContainer(dom, formatList, endContainer, endOffset, false, expandToBlock);
             if (isText$b(endContainer)) {
               endOffset = endContainer.data.length;
             }
@@ -9303,18 +9415,18 @@
     const applyAnnotation = (elem, masterUId, data, annotationName, decorate, directAnnotation) => {
       const {uid = masterUId, ...otherData} = data;
       add$2(elem, annotation());
-      set$3(elem, `${ dataAnnotationId() }`, uid);
-      set$3(elem, `${ dataAnnotation() }`, annotationName);
+      set$4(elem, `${ dataAnnotationId() }`, uid);
+      set$4(elem, `${ dataAnnotation() }`, annotationName);
       const {attributes = {}, classes = []} = decorate(uid, otherData);
       setAll$1(elem, attributes);
       add(elem, classes);
       if (directAnnotation) {
         if (classes.length > 0) {
-          set$3(elem, `${ dataAnnotationClasses() }`, classes.join(','));
+          set$4(elem, `${ dataAnnotationClasses() }`, classes.join(','));
         }
         const attributeNames = keys(attributes);
         if (attributeNames.length > 0) {
-          set$3(elem, `${ dataAnnotationAttributes() }`, attributeNames.join(','));
+          set$4(elem, `${ dataAnnotationAttributes() }`, attributeNames.join(','));
         }
       }
     };
@@ -9470,88 +9582,399 @@
       }
     };
 
-    const firePreProcess = (editor, args) => editor.dispatch('PreProcess', args);
-    const firePostProcess = (editor, args) => editor.dispatch('PostProcess', args);
-    const fireRemove = editor => {
-      editor.dispatch('remove');
+    const getDocument = () => SugarElement.fromDom(document);
+
+    const focus$1 = (element, preventScroll = false) => element.dom.focus({ preventScroll });
+    const hasFocus$1 = element => {
+      const root = getRootNode(element).dom;
+      return element.dom === root.activeElement;
     };
-    const fireDetach = editor => {
-      editor.dispatch('detach');
-    };
-    const fireSwitchMode = (editor, mode) => {
-      editor.dispatch('SwitchMode', { mode });
-    };
-    const fireObjectResizeStart = (editor, target, width, height, origin) => {
-      editor.dispatch('ObjectResizeStart', {
-        target,
-        width,
-        height,
-        origin
-      });
-    };
-    const fireObjectResized = (editor, target, width, height, origin) => {
-      editor.dispatch('ObjectResized', {
-        target,
-        width,
-        height,
-        origin
-      });
-    };
-    const firePreInit = editor => {
-      editor.dispatch('PreInit');
-    };
-    const firePostRender = editor => {
-      editor.dispatch('PostRender');
-    };
-    const fireInit = editor => {
-      editor.dispatch('Init');
-    };
-    const firePlaceholderToggle = (editor, state) => {
-      editor.dispatch('PlaceholderToggle', { state });
-    };
-    const fireError = (editor, errorType, error) => {
-      editor.dispatch(errorType, error);
-    };
-    const fireFormatApply = (editor, format, node, vars) => {
-      editor.dispatch('FormatApply', {
-        format,
-        node,
-        vars
-      });
-    };
-    const fireFormatRemove = (editor, format, node, vars) => {
-      editor.dispatch('FormatRemove', {
-        format,
-        node,
-        vars
-      });
-    };
-    const fireBeforeSetContent = (editor, args) => editor.dispatch('BeforeSetContent', args);
-    const fireSetContent = (editor, args) => editor.dispatch('SetContent', args);
-    const fireBeforeGetContent = (editor, args) => editor.dispatch('BeforeGetContent', args);
-    const fireGetContent = (editor, args) => editor.dispatch('GetContent', args);
-    const fireAutocompleterStart = (editor, args) => {
-      editor.dispatch('AutocompleterStart', args);
-    };
-    const fireAutocompleterUpdate = (editor, args) => {
-      editor.dispatch('AutocompleterUpdate', args);
-    };
-    const fireAutocompleterUpdateActiveRange = (editor, args) => {
-      editor.dispatch('AutocompleterUpdateActiveRange', args);
-    };
-    const fireAutocompleterEnd = editor => {
-      editor.dispatch('AutocompleterEnd');
-    };
-    const firePastePreProcess = (editor, html, internal) => editor.dispatch('PastePreProcess', {
-      content: html,
-      internal
+    const active$1 = (root = getDocument()) => Optional.from(root.dom.activeElement).map(SugarElement.fromDom);
+    const search = element => active$1(getRootNode(element)).filter(e => element.dom.contains(e.dom));
+
+    const create$9 = (start, soffset, finish, foffset) => ({
+      start,
+      soffset,
+      finish,
+      foffset
     });
-    const firePastePostProcess = (editor, node, internal) => editor.dispatch('PastePostProcess', {
-      node,
-      internal
+    const SimRange = { create: create$9 };
+
+    const adt$3 = Adt.generate([
+      { before: ['element'] },
+      {
+        on: [
+          'element',
+          'offset'
+        ]
+      },
+      { after: ['element'] }
+    ]);
+    const cata = (subject, onBefore, onOn, onAfter) => subject.fold(onBefore, onOn, onAfter);
+    const getStart$2 = situ => situ.fold(identity, identity, identity);
+    const before$1 = adt$3.before;
+    const on = adt$3.on;
+    const after$1 = adt$3.after;
+    const Situ = {
+      before: before$1,
+      on,
+      after: after$1,
+      cata,
+      getStart: getStart$2
+    };
+
+    const adt$2 = Adt.generate([
+      { domRange: ['rng'] },
+      {
+        relative: [
+          'startSitu',
+          'finishSitu'
+        ]
+      },
+      {
+        exact: [
+          'start',
+          'soffset',
+          'finish',
+          'foffset'
+        ]
+      }
+    ]);
+    const exactFromRange = simRange => adt$2.exact(simRange.start, simRange.soffset, simRange.finish, simRange.foffset);
+    const getStart$1 = selection => selection.match({
+      domRange: rng => SugarElement.fromDom(rng.startContainer),
+      relative: (startSitu, _finishSitu) => Situ.getStart(startSitu),
+      exact: (start, _soffset, _finish, _foffset) => start
     });
-    const firePastePlainTextToggle = (editor, state) => editor.dispatch('PastePlainTextToggle', { state });
-    const fireEditableRootStateChange = (editor, state) => editor.dispatch('EditableRootStateChange', { state });
+    const domRange = adt$2.domRange;
+    const relative = adt$2.relative;
+    const exact = adt$2.exact;
+    const getWin = selection => {
+      const start = getStart$1(selection);
+      return defaultView(start);
+    };
+    const range = SimRange.create;
+    const SimSelection = {
+      domRange,
+      relative,
+      exact,
+      exactFromRange,
+      getWin,
+      range
+    };
+
+    const clamp$1 = (offset, element) => {
+      const max = isText$c(element) ? get$3(element).length : children$1(element).length + 1;
+      if (offset > max) {
+        return max;
+      } else if (offset < 0) {
+        return 0;
+      }
+      return offset;
+    };
+    const normalizeRng = rng => SimSelection.range(rng.start, clamp$1(rng.soffset, rng.start), rng.finish, clamp$1(rng.foffset, rng.finish));
+    const isOrContains = (root, elm) => !isRestrictedNode(elm.dom) && (contains(root, elm) || eq(root, elm));
+    const isRngInRoot = root => rng => isOrContains(root, rng.start) && isOrContains(root, rng.finish);
+    const shouldStore = editor => editor.inline || Env.browser.isFirefox();
+    const nativeRangeToSelectionRange = r => SimSelection.range(SugarElement.fromDom(r.startContainer), r.startOffset, SugarElement.fromDom(r.endContainer), r.endOffset);
+    const readRange = win => {
+      const selection = win.getSelection();
+      const rng = !selection || selection.rangeCount === 0 ? Optional.none() : Optional.from(selection.getRangeAt(0));
+      return rng.map(nativeRangeToSelectionRange);
+    };
+    const getBookmark$1 = root => {
+      const win = defaultView(root);
+      return readRange(win.dom).filter(isRngInRoot(root));
+    };
+    const validate = (root, bookmark) => Optional.from(bookmark).filter(isRngInRoot(root)).map(normalizeRng);
+    const bookmarkToNativeRng = bookmark => {
+      const rng = document.createRange();
+      try {
+        rng.setStart(bookmark.start.dom, bookmark.soffset);
+        rng.setEnd(bookmark.finish.dom, bookmark.foffset);
+        return Optional.some(rng);
+      } catch (_a) {
+        return Optional.none();
+      }
+    };
+    const store = editor => {
+      const newBookmark = shouldStore(editor) ? getBookmark$1(SugarElement.fromDom(editor.getBody())) : Optional.none();
+      editor.bookmark = newBookmark.isSome() ? newBookmark : editor.bookmark;
+    };
+    const getRng = editor => {
+      const bookmark = editor.bookmark ? editor.bookmark : Optional.none();
+      return bookmark.bind(x => validate(SugarElement.fromDom(editor.getBody()), x)).bind(bookmarkToNativeRng);
+    };
+    const restore = editor => {
+      getRng(editor).each(rng => editor.selection.setRng(rng));
+    };
+
+    const isEditorUIElement$1 = elm => {
+      const className = elm.className.toString();
+      return className.indexOf('tox-') !== -1 || className.indexOf('mce-') !== -1;
+    };
+    const FocusManager = { isEditorUIElement: isEditorUIElement$1 };
+
+    const wrappedSetTimeout = (callback, time) => {
+      if (!isNumber(time)) {
+        time = 0;
+      }
+      return setTimeout(callback, time);
+    };
+    const wrappedSetInterval = (callback, time) => {
+      if (!isNumber(time)) {
+        time = 0;
+      }
+      return setInterval(callback, time);
+    };
+    const Delay = {
+      setEditorTimeout: (editor, callback, time) => {
+        return wrappedSetTimeout(() => {
+          if (!editor.removed) {
+            callback();
+          }
+        }, time);
+      },
+      setEditorInterval: (editor, callback, time) => {
+        const timer = wrappedSetInterval(() => {
+          if (!editor.removed) {
+            callback();
+          } else {
+            clearInterval(timer);
+          }
+        }, time);
+        return timer;
+      }
+    };
+
+    const isManualNodeChange = e => {
+      return e.type === 'nodechange' && e.selectionChange;
+    };
+    const registerPageMouseUp = (editor, throttledStore) => {
+      const mouseUpPage = () => {
+        throttledStore.throttle();
+      };
+      DOMUtils.DOM.bind(document, 'mouseup', mouseUpPage);
+      editor.on('remove', () => {
+        DOMUtils.DOM.unbind(document, 'mouseup', mouseUpPage);
+      });
+    };
+    const registerMouseUp = (editor, throttledStore) => {
+      editor.on('mouseup touchend', _e => {
+        throttledStore.throttle();
+      });
+    };
+    const registerEditorEvents = (editor, throttledStore) => {
+      registerMouseUp(editor, throttledStore);
+      editor.on('keyup NodeChange AfterSetSelectionRange', e => {
+        if (!isManualNodeChange(e)) {
+          store(editor);
+        }
+      });
+    };
+    const register$6 = editor => {
+      const throttledStore = first$1(() => {
+        store(editor);
+      }, 0);
+      editor.on('init', () => {
+        if (editor.inline) {
+          registerPageMouseUp(editor, throttledStore);
+        }
+        registerEditorEvents(editor, throttledStore);
+      });
+      editor.on('remove', () => {
+        throttledStore.cancel();
+      });
+    };
+
+    let documentFocusInHandler;
+    const DOM$9 = DOMUtils.DOM;
+    const isEditorUIElement = elm => {
+      return isElement$6(elm) && FocusManager.isEditorUIElement(elm);
+    };
+    const isEditorContentAreaElement = elm => {
+      const classList = elm.classList;
+      if (classList !== undefined) {
+        return classList.contains('tox-edit-area') || classList.contains('tox-edit-area__iframe') || classList.contains('mce-content-body');
+      } else {
+        return false;
+      }
+    };
+    const isUIElement = (editor, elm) => {
+      const customSelector = getCustomUiSelector(editor);
+      const parent = DOM$9.getParent(elm, elm => {
+        return isEditorUIElement(elm) || (customSelector ? editor.dom.is(elm, customSelector) : false);
+      });
+      return parent !== null;
+    };
+    const getActiveElement = editor => {
+      try {
+        const root = getRootNode(SugarElement.fromDom(editor.getElement()));
+        return active$1(root).fold(() => document.body, x => x.dom);
+      } catch (_a) {
+        return document.body;
+      }
+    };
+    const registerEvents$1 = (editorManager, e) => {
+      const editor = e.editor;
+      register$6(editor);
+      const toggleContentAreaOnFocus = (editor, fn) => {
+        if (shouldHighlightOnFocus(editor) && editor.inline !== true) {
+          const contentArea = SugarElement.fromDom(editor.getContainer());
+          fn(contentArea, 'tox-edit-focus');
+        }
+      };
+      editor.on('focusin', () => {
+        const focusedEditor = editorManager.focusedEditor;
+        if (isEditorContentAreaElement(getActiveElement(editor))) {
+          toggleContentAreaOnFocus(editor, add$2);
+        }
+        if (focusedEditor !== editor) {
+          if (focusedEditor) {
+            focusedEditor.dispatch('blur', { focusedEditor: editor });
+          }
+          editorManager.setActive(editor);
+          editorManager.focusedEditor = editor;
+          editor.dispatch('focus', { blurredEditor: focusedEditor });
+          editor.focus(true);
+        }
+      });
+      editor.on('focusout', () => {
+        Delay.setEditorTimeout(editor, () => {
+          const focusedEditor = editorManager.focusedEditor;
+          if (!isEditorContentAreaElement(getActiveElement(editor)) || focusedEditor !== editor) {
+            toggleContentAreaOnFocus(editor, remove$6);
+          }
+          if (!isUIElement(editor, getActiveElement(editor)) && focusedEditor === editor) {
+            editor.dispatch('blur', { focusedEditor: null });
+            editorManager.focusedEditor = null;
+          }
+        });
+      });
+      if (!documentFocusInHandler) {
+        documentFocusInHandler = e => {
+          const activeEditor = editorManager.activeEditor;
+          if (activeEditor) {
+            getOriginalEventTarget(e).each(target => {
+              const elem = target;
+              if (elem.ownerDocument === document) {
+                if (elem !== document.body && !isUIElement(activeEditor, elem) && editorManager.focusedEditor === activeEditor) {
+                  activeEditor.dispatch('blur', { focusedEditor: null });
+                  editorManager.focusedEditor = null;
+                }
+              }
+            });
+          }
+        };
+        DOM$9.bind(document, 'focusin', documentFocusInHandler);
+      }
+    };
+    const unregisterDocumentEvents = (editorManager, e) => {
+      if (editorManager.focusedEditor === e.editor) {
+        editorManager.focusedEditor = null;
+      }
+      if (!editorManager.activeEditor && documentFocusInHandler) {
+        DOM$9.unbind(document, 'focusin', documentFocusInHandler);
+        documentFocusInHandler = null;
+      }
+    };
+    const setup$w = editorManager => {
+      editorManager.on('AddEditor', curry(registerEvents$1, editorManager));
+      editorManager.on('RemoveEditor', curry(unregisterDocumentEvents, editorManager));
+    };
+
+    const getContentEditableHost = (editor, node) => editor.dom.getParent(node, node => editor.dom.getContentEditable(node) === 'true');
+    const hasContentEditableFalseParent$1 = (editor, node) => editor.dom.getParent(node, node => editor.dom.getContentEditable(node) === 'false') !== null;
+    const getCollapsedNode = rng => rng.collapsed ? Optional.from(getNode$1(rng.startContainer, rng.startOffset)).map(SugarElement.fromDom) : Optional.none();
+    const getFocusInElement = (root, rng) => getCollapsedNode(rng).bind(node => {
+      if (isTableSection(node)) {
+        return Optional.some(node);
+      } else if (!contains(root, node)) {
+        return Optional.some(root);
+      } else {
+        return Optional.none();
+      }
+    });
+    const normalizeSelection = (editor, rng) => {
+      getFocusInElement(SugarElement.fromDom(editor.getBody()), rng).bind(elm => {
+        return firstPositionIn(elm.dom);
+      }).fold(() => {
+        editor.selection.normalize();
+      }, caretPos => editor.selection.setRng(caretPos.toRange()));
+    };
+    const focusBody = body => {
+      if (body.setActive) {
+        try {
+          body.setActive();
+        } catch (_a) {
+          body.focus();
+        }
+      } else {
+        body.focus();
+      }
+    };
+    const hasElementFocus = elm => hasFocus$1(elm) || search(elm).isSome();
+    const hasIframeFocus = editor => isNonNullable(editor.iframeElement) && hasFocus$1(SugarElement.fromDom(editor.iframeElement));
+    const hasInlineFocus = editor => {
+      const rawBody = editor.getBody();
+      return rawBody && hasElementFocus(SugarElement.fromDom(rawBody));
+    };
+    const hasUiFocus = editor => {
+      const dos = getRootNode(SugarElement.fromDom(editor.getElement()));
+      return active$1(dos).filter(elem => !isEditorContentAreaElement(elem.dom) && isUIElement(editor, elem.dom)).isSome();
+    };
+    const hasFocus = editor => editor.inline ? hasInlineFocus(editor) : hasIframeFocus(editor);
+    const hasEditorOrUiFocus = editor => hasFocus(editor) || hasUiFocus(editor);
+    const focusEditor = editor => {
+      const selection = editor.selection;
+      const body = editor.getBody();
+      let rng = selection.getRng();
+      editor.quirks.refreshContentEditable();
+      const restoreBookmark = editor => {
+        getRng(editor).each(bookmarkRng => {
+          editor.selection.setRng(bookmarkRng);
+          rng = bookmarkRng;
+        });
+      };
+      if (!hasFocus(editor) && editor.hasEditableRoot()) {
+        restoreBookmark(editor);
+      }
+      const contentEditableHost = getContentEditableHost(editor, selection.getNode());
+      if (contentEditableHost && editor.dom.isChildOf(contentEditableHost, body)) {
+        if (!hasContentEditableFalseParent$1(editor, contentEditableHost)) {
+          focusBody(body);
+        }
+        focusBody(contentEditableHost);
+        if (!editor.hasEditableRoot()) {
+          restoreBookmark(editor);
+        }
+        normalizeSelection(editor, rng);
+        activateEditor(editor);
+        return;
+      }
+      if (!editor.inline) {
+        if (!Env.browser.isOpera()) {
+          focusBody(body);
+        }
+        editor.getWin().focus();
+      }
+      if (Env.browser.isFirefox() || editor.inline) {
+        focusBody(body);
+        normalizeSelection(editor, rng);
+      }
+      activateEditor(editor);
+    };
+    const activateEditor = editor => editor.editorManager.setActive(editor);
+    const focus = (editor, skipFocus) => {
+      if (editor.removed) {
+        return;
+      }
+      if (skipFocus) {
+        activateEditor(editor);
+      } else {
+        focusEditor(editor);
+      }
+    };
 
     const VK = {
       BACKSPACE: 8,
@@ -9613,7 +10036,7 @@
       const rootDocument = document;
       const rootElement = editor.getBody();
       let selectedElm, selectedElmGhost, resizeHelper, selectedHandle, resizeBackdrop;
-      let startX, startY, selectedElmX, selectedElmY, startW, startH, ratio, resizeStarted;
+      let startX, startY, startW, startH, ratio, resizeStarted;
       let width;
       let height;
       let startScrollWidth;
@@ -9730,12 +10153,6 @@
           display: 'block'
         });
         resizeHelper.innerHTML = width + ' &times; ' + height;
-        if (selectedHandle[2] < 0 && selectedElmGhost.clientWidth <= width) {
-          dom.setStyle(selectedElmGhost, 'left', selectedElmX + (startW - width));
-        }
-        if (selectedHandle[3] < 0 && selectedElmGhost.clientHeight <= height) {
-          dom.setStyle(selectedElmGhost, 'top', selectedElmY + (startH - height));
-        }
         deltaX = rootElement.scrollWidth - startScrollWidth;
         deltaY = rootElement.scrollHeight - startScrollHeight;
         if (deltaX + deltaY !== 0) {
@@ -9889,7 +10306,7 @@
         each$e(dom.select(`img[${ elementSelectionAttr }],hr[${ elementSelectionAttr }]`), img => {
           img.removeAttribute(elementSelectionAttr);
         });
-        if (isNonNullable(controlElm) && isChildOrEqual(controlElm, rootElement) && editor.hasFocus()) {
+        if (isNonNullable(controlElm) && isChildOrEqual(controlElm, rootElement) && hasEditorOrUiFocus(editor)) {
           disableGeckoResize();
           const startElm = selection.getStart(true);
           if (isChildOrEqual(startElm, controlElm) && isChildOrEqual(selection.getEnd(true), controlElm)) {
@@ -9911,7 +10328,7 @@
       const disableGeckoResize = () => {
         try {
           editor.getDoc().execCommand('enableObjectResizing', false, 'false');
-        } catch (ex) {
+        } catch (_a) {
         }
       };
       editor.on('init', () => {
@@ -9970,7 +10387,7 @@
       return rng;
     };
 
-    const adt$3 = Adt.generate([
+    const adt$1 = Adt.generate([
       {
         ltr: [
           'start',
@@ -10013,25 +10430,17 @@
       const rng = ranges.ltr();
       if (rng.collapsed) {
         const reversed = ranges.rtl().filter(rev => rev.collapsed === false);
-        return reversed.map(rev => adt$3.rtl(SugarElement.fromDom(rev.endContainer), rev.endOffset, SugarElement.fromDom(rev.startContainer), rev.startOffset)).getOrThunk(() => fromRange(win, adt$3.ltr, rng));
+        return reversed.map(rev => adt$1.rtl(SugarElement.fromDom(rev.endContainer), rev.endOffset, SugarElement.fromDom(rev.startContainer), rev.startOffset)).getOrThunk(() => fromRange(win, adt$1.ltr, rng));
       } else {
-        return fromRange(win, adt$3.ltr, rng);
+        return fromRange(win, adt$1.ltr, rng);
       }
     };
     const diagnose = (win, selection) => {
       const ranges = getRanges(win, selection);
       return doDiagnose(win, ranges);
     };
-    adt$3.ltr;
-    adt$3.rtl;
-
-    const create$9 = (start, soffset, finish, foffset) => ({
-      start,
-      soffset,
-      finish,
-      foffset
-    });
-    const SimRange = { create: create$9 };
+    adt$1.ltr;
+    adt$1.rtl;
 
     const caretPositionFromPoint = (doc, x, y) => {
       var _a;
@@ -10061,69 +10470,6 @@
     const fromPoint$1 = (win, x, y) => {
       const doc = win.document;
       return availableSearch(doc, x, y).map(rng => SimRange.create(SugarElement.fromDom(rng.startContainer), rng.startOffset, SugarElement.fromDom(rng.endContainer), rng.endOffset));
-    };
-
-    const adt$2 = Adt.generate([
-      { before: ['element'] },
-      {
-        on: [
-          'element',
-          'offset'
-        ]
-      },
-      { after: ['element'] }
-    ]);
-    const cata = (subject, onBefore, onOn, onAfter) => subject.fold(onBefore, onOn, onAfter);
-    const getStart$2 = situ => situ.fold(identity, identity, identity);
-    const before$1 = adt$2.before;
-    const on = adt$2.on;
-    const after$1 = adt$2.after;
-    const Situ = {
-      before: before$1,
-      on,
-      after: after$1,
-      cata,
-      getStart: getStart$2
-    };
-
-    const adt$1 = Adt.generate([
-      { domRange: ['rng'] },
-      {
-        relative: [
-          'startSitu',
-          'finishSitu'
-        ]
-      },
-      {
-        exact: [
-          'start',
-          'soffset',
-          'finish',
-          'foffset'
-        ]
-      }
-    ]);
-    const exactFromRange = simRange => adt$1.exact(simRange.start, simRange.soffset, simRange.finish, simRange.foffset);
-    const getStart$1 = selection => selection.match({
-      domRange: rng => SugarElement.fromDom(rng.startContainer),
-      relative: (startSitu, _finishSitu) => Situ.getStart(startSitu),
-      exact: (start, _soffset, _finish, _foffset) => start
-    });
-    const domRange = adt$1.domRange;
-    const relative = adt$1.relative;
-    const exact = adt$1.exact;
-    const getWin = selection => {
-      const start = getStart$1(selection);
-      return defaultView(start);
-    };
-    const range = SimRange.create;
-    const SimSelection = {
-      domRange,
-      relative,
-      exact,
-      exactFromRange,
-      getWin,
-      range
     };
 
     const beforeSpecial = (element, offset) => {
@@ -10223,7 +10569,7 @@
       var _a;
       return ((_a = node.previousSibling) === null || _a === void 0 ? void 0 : _a.nodeName) === name;
     };
-    const hasContentEditableFalseParent$1 = (root, node) => {
+    const hasContentEditableFalseParent = (root, node) => {
       let currentNode = node;
       while (currentNode && currentNode !== root) {
         if (isContentEditableFalse$b(currentNode)) {
@@ -10308,7 +10654,7 @@
           if (!collapsed && container === body.lastChild && isTable$2(container)) {
             return Optional.none();
           }
-          if (hasContentEditableFalseParent$1(body, container) || isCaretContainer$2(container)) {
+          if (hasContentEditableFalseParent(body, container) || isCaretContainer$2(container)) {
             return Optional.none();
           }
           if (isDetails(container)) {
@@ -10443,7 +10789,10 @@
       };
       const expand = (rng, options = { type: 'word' }) => {
         if (options.type === 'word') {
-          const rangeLike = expandRng(dom, rng, [{ inline: 'span' }]);
+          const rangeLike = expandRng(dom, rng, [{ inline: 'span' }], {
+            includeTrailingSpace: false,
+            expandToBlock: false
+          });
           const newRange = dom.createRng();
           newRange.setStart(rangeLike.startContainer, rangeLike.startOffset);
           newRange.setEnd(rangeLike.endContainer, rangeLike.endOffset);
@@ -10506,8 +10855,6 @@
       return inBody(element) ? dom.getBoundingClientRect().height : dom.offsetHeight;
     });
     const get$2 = element => api.get(element);
-
-    const getDocument = () => SugarElement.fromDom(document);
 
     const walkUp = (navigation, doc) => {
       const frame = navigation.view(doc);
@@ -10705,327 +11052,6 @@
     const scrollRangeIntoView = (editor, rng, alignToTop) => {
       const scroller = editor.inline ? rangeIntoWindow : rangeIntoFrame;
       scroller(editor, rng, alignToTop);
-    };
-
-    const focus$1 = (element, preventScroll = false) => element.dom.focus({ preventScroll });
-    const hasFocus$1 = element => {
-      const root = getRootNode(element).dom;
-      return element.dom === root.activeElement;
-    };
-    const active$1 = (root = getDocument()) => Optional.from(root.dom.activeElement).map(SugarElement.fromDom);
-    const search = element => active$1(getRootNode(element)).filter(e => element.dom.contains(e.dom));
-
-    const clamp$1 = (offset, element) => {
-      const max = isText$c(element) ? get$3(element).length : children$1(element).length + 1;
-      if (offset > max) {
-        return max;
-      } else if (offset < 0) {
-        return 0;
-      }
-      return offset;
-    };
-    const normalizeRng = rng => SimSelection.range(rng.start, clamp$1(rng.soffset, rng.start), rng.finish, clamp$1(rng.foffset, rng.finish));
-    const isOrContains = (root, elm) => !isRestrictedNode(elm.dom) && (contains(root, elm) || eq(root, elm));
-    const isRngInRoot = root => rng => isOrContains(root, rng.start) && isOrContains(root, rng.finish);
-    const shouldStore = editor => editor.inline || Env.browser.isFirefox();
-    const nativeRangeToSelectionRange = r => SimSelection.range(SugarElement.fromDom(r.startContainer), r.startOffset, SugarElement.fromDom(r.endContainer), r.endOffset);
-    const readRange = win => {
-      const selection = win.getSelection();
-      const rng = !selection || selection.rangeCount === 0 ? Optional.none() : Optional.from(selection.getRangeAt(0));
-      return rng.map(nativeRangeToSelectionRange);
-    };
-    const getBookmark$1 = root => {
-      const win = defaultView(root);
-      return readRange(win.dom).filter(isRngInRoot(root));
-    };
-    const validate = (root, bookmark) => Optional.from(bookmark).filter(isRngInRoot(root)).map(normalizeRng);
-    const bookmarkToNativeRng = bookmark => {
-      const rng = document.createRange();
-      try {
-        rng.setStart(bookmark.start.dom, bookmark.soffset);
-        rng.setEnd(bookmark.finish.dom, bookmark.foffset);
-        return Optional.some(rng);
-      } catch (_) {
-        return Optional.none();
-      }
-    };
-    const store = editor => {
-      const newBookmark = shouldStore(editor) ? getBookmark$1(SugarElement.fromDom(editor.getBody())) : Optional.none();
-      editor.bookmark = newBookmark.isSome() ? newBookmark : editor.bookmark;
-    };
-    const getRng = editor => {
-      const bookmark = editor.bookmark ? editor.bookmark : Optional.none();
-      return bookmark.bind(x => validate(SugarElement.fromDom(editor.getBody()), x)).bind(bookmarkToNativeRng);
-    };
-    const restore = editor => {
-      getRng(editor).each(rng => editor.selection.setRng(rng));
-    };
-
-    const isEditorUIElement$1 = elm => {
-      const className = elm.className.toString();
-      return className.indexOf('tox-') !== -1 || className.indexOf('mce-') !== -1;
-    };
-    const FocusManager = { isEditorUIElement: isEditorUIElement$1 };
-
-    const wrappedSetTimeout = (callback, time) => {
-      if (!isNumber(time)) {
-        time = 0;
-      }
-      return setTimeout(callback, time);
-    };
-    const wrappedSetInterval = (callback, time) => {
-      if (!isNumber(time)) {
-        time = 0;
-      }
-      return setInterval(callback, time);
-    };
-    const Delay = {
-      setEditorTimeout: (editor, callback, time) => {
-        return wrappedSetTimeout(() => {
-          if (!editor.removed) {
-            callback();
-          }
-        }, time);
-      },
-      setEditorInterval: (editor, callback, time) => {
-        const timer = wrappedSetInterval(() => {
-          if (!editor.removed) {
-            callback();
-          } else {
-            clearInterval(timer);
-          }
-        }, time);
-        return timer;
-      }
-    };
-
-    const isManualNodeChange = e => {
-      return e.type === 'nodechange' && e.selectionChange;
-    };
-    const registerPageMouseUp = (editor, throttledStore) => {
-      const mouseUpPage = () => {
-        throttledStore.throttle();
-      };
-      DOMUtils.DOM.bind(document, 'mouseup', mouseUpPage);
-      editor.on('remove', () => {
-        DOMUtils.DOM.unbind(document, 'mouseup', mouseUpPage);
-      });
-    };
-    const registerMouseUp = (editor, throttledStore) => {
-      editor.on('mouseup touchend', _e => {
-        throttledStore.throttle();
-      });
-    };
-    const registerEditorEvents = (editor, throttledStore) => {
-      registerMouseUp(editor, throttledStore);
-      editor.on('keyup NodeChange AfterSetSelectionRange', e => {
-        if (!isManualNodeChange(e)) {
-          store(editor);
-        }
-      });
-    };
-    const register$6 = editor => {
-      const throttledStore = first$1(() => {
-        store(editor);
-      }, 0);
-      editor.on('init', () => {
-        if (editor.inline) {
-          registerPageMouseUp(editor, throttledStore);
-        }
-        registerEditorEvents(editor, throttledStore);
-      });
-      editor.on('remove', () => {
-        throttledStore.cancel();
-      });
-    };
-
-    let documentFocusInHandler;
-    const DOM$9 = DOMUtils.DOM;
-    const isEditorUIElement = elm => {
-      return isElement$6(elm) && FocusManager.isEditorUIElement(elm);
-    };
-    const isEditorContentAreaElement = elm => {
-      const classList = elm.classList;
-      if (classList !== undefined) {
-        return classList.contains('tox-edit-area') || classList.contains('tox-edit-area__iframe') || classList.contains('mce-content-body');
-      } else {
-        return false;
-      }
-    };
-    const isUIElement = (editor, elm) => {
-      const customSelector = getCustomUiSelector(editor);
-      const parent = DOM$9.getParent(elm, elm => {
-        return isEditorUIElement(elm) || (customSelector ? editor.dom.is(elm, customSelector) : false);
-      });
-      return parent !== null;
-    };
-    const getActiveElement = editor => {
-      try {
-        const root = getRootNode(SugarElement.fromDom(editor.getElement()));
-        return active$1(root).fold(() => document.body, x => x.dom);
-      } catch (ex) {
-        return document.body;
-      }
-    };
-    const registerEvents$1 = (editorManager, e) => {
-      const editor = e.editor;
-      register$6(editor);
-      const toggleContentAreaOnFocus = (editor, fn) => {
-        if (shouldHighlightOnFocus(editor) && editor.inline !== true) {
-          const contentArea = SugarElement.fromDom(editor.getContainer());
-          fn(contentArea, 'tox-edit-focus');
-        }
-      };
-      editor.on('focusin', () => {
-        const focusedEditor = editorManager.focusedEditor;
-        if (isEditorContentAreaElement(getActiveElement(editor))) {
-          toggleContentAreaOnFocus(editor, add$2);
-        }
-        if (focusedEditor !== editor) {
-          if (focusedEditor) {
-            focusedEditor.dispatch('blur', { focusedEditor: editor });
-          }
-          editorManager.setActive(editor);
-          editorManager.focusedEditor = editor;
-          editor.dispatch('focus', { blurredEditor: focusedEditor });
-          editor.focus(true);
-        }
-      });
-      editor.on('focusout', () => {
-        Delay.setEditorTimeout(editor, () => {
-          const focusedEditor = editorManager.focusedEditor;
-          if (!isEditorContentAreaElement(getActiveElement(editor)) || focusedEditor !== editor) {
-            toggleContentAreaOnFocus(editor, remove$6);
-          }
-          if (!isUIElement(editor, getActiveElement(editor)) && focusedEditor === editor) {
-            editor.dispatch('blur', { focusedEditor: null });
-            editorManager.focusedEditor = null;
-          }
-        });
-      });
-      if (!documentFocusInHandler) {
-        documentFocusInHandler = e => {
-          const activeEditor = editorManager.activeEditor;
-          if (activeEditor) {
-            getOriginalEventTarget(e).each(target => {
-              const elem = target;
-              if (elem.ownerDocument === document) {
-                if (elem !== document.body && !isUIElement(activeEditor, elem) && editorManager.focusedEditor === activeEditor) {
-                  activeEditor.dispatch('blur', { focusedEditor: null });
-                  editorManager.focusedEditor = null;
-                }
-              }
-            });
-          }
-        };
-        DOM$9.bind(document, 'focusin', documentFocusInHandler);
-      }
-    };
-    const unregisterDocumentEvents = (editorManager, e) => {
-      if (editorManager.focusedEditor === e.editor) {
-        editorManager.focusedEditor = null;
-      }
-      if (!editorManager.activeEditor && documentFocusInHandler) {
-        DOM$9.unbind(document, 'focusin', documentFocusInHandler);
-        documentFocusInHandler = null;
-      }
-    };
-    const setup$w = editorManager => {
-      editorManager.on('AddEditor', curry(registerEvents$1, editorManager));
-      editorManager.on('RemoveEditor', curry(unregisterDocumentEvents, editorManager));
-    };
-
-    const getContentEditableHost = (editor, node) => editor.dom.getParent(node, node => editor.dom.getContentEditable(node) === 'true');
-    const hasContentEditableFalseParent = (editor, node) => editor.dom.getParent(node, node => editor.dom.getContentEditable(node) === 'false') !== null;
-    const getCollapsedNode = rng => rng.collapsed ? Optional.from(getNode$1(rng.startContainer, rng.startOffset)).map(SugarElement.fromDom) : Optional.none();
-    const getFocusInElement = (root, rng) => getCollapsedNode(rng).bind(node => {
-      if (isTableSection(node)) {
-        return Optional.some(node);
-      } else if (!contains(root, node)) {
-        return Optional.some(root);
-      } else {
-        return Optional.none();
-      }
-    });
-    const normalizeSelection = (editor, rng) => {
-      getFocusInElement(SugarElement.fromDom(editor.getBody()), rng).bind(elm => {
-        return firstPositionIn(elm.dom);
-      }).fold(() => {
-        editor.selection.normalize();
-      }, caretPos => editor.selection.setRng(caretPos.toRange()));
-    };
-    const focusBody = body => {
-      if (body.setActive) {
-        try {
-          body.setActive();
-        } catch (ex) {
-          body.focus();
-        }
-      } else {
-        body.focus();
-      }
-    };
-    const hasElementFocus = elm => hasFocus$1(elm) || search(elm).isSome();
-    const hasIframeFocus = editor => isNonNullable(editor.iframeElement) && hasFocus$1(SugarElement.fromDom(editor.iframeElement));
-    const hasInlineFocus = editor => {
-      const rawBody = editor.getBody();
-      return rawBody && hasElementFocus(SugarElement.fromDom(rawBody));
-    };
-    const hasUiFocus = editor => {
-      const dos = getRootNode(SugarElement.fromDom(editor.getElement()));
-      return active$1(dos).filter(elem => !isEditorContentAreaElement(elem.dom) && isUIElement(editor, elem.dom)).isSome();
-    };
-    const hasFocus = editor => editor.inline ? hasInlineFocus(editor) : hasIframeFocus(editor);
-    const hasEditorOrUiFocus = editor => hasFocus(editor) || hasUiFocus(editor);
-    const focusEditor = editor => {
-      const selection = editor.selection;
-      const body = editor.getBody();
-      let rng = selection.getRng();
-      editor.quirks.refreshContentEditable();
-      const restoreBookmark = editor => {
-        getRng(editor).each(bookmarkRng => {
-          editor.selection.setRng(bookmarkRng);
-          rng = bookmarkRng;
-        });
-      };
-      if (!hasFocus(editor) && editor.hasEditableRoot()) {
-        restoreBookmark(editor);
-      }
-      const contentEditableHost = getContentEditableHost(editor, selection.getNode());
-      if (contentEditableHost && editor.dom.isChildOf(contentEditableHost, body)) {
-        if (!hasContentEditableFalseParent(editor, contentEditableHost)) {
-          focusBody(body);
-        }
-        focusBody(contentEditableHost);
-        if (!editor.hasEditableRoot()) {
-          restoreBookmark(editor);
-        }
-        normalizeSelection(editor, rng);
-        activateEditor(editor);
-        return;
-      }
-      if (!editor.inline) {
-        if (!Env.browser.isOpera()) {
-          focusBody(body);
-        }
-        editor.getWin().focus();
-      }
-      if (Env.browser.isFirefox() || editor.inline) {
-        focusBody(body);
-        normalizeSelection(editor, rng);
-      }
-      activateEditor(editor);
-    };
-    const activateEditor = editor => editor.editorManager.setActive(editor);
-    const focus = (editor, skipFocus) => {
-      if (editor.removed) {
-        return;
-      }
-      if (skipFocus) {
-        activateEditor(editor);
-      } else {
-        focusEditor(editor);
-      }
     };
 
     const isEditableRange = (dom, rng) => {
@@ -11521,7 +11547,7 @@
       const doc = editor.getDoc();
       const dos = getRootNode(SugarElement.fromDom(editor.getBody()));
       const offscreenDiv = SugarElement.fromTag('div', doc);
-      set$3(offscreenDiv, 'data-mce-bogus', 'all');
+      set$4(offscreenDiv, 'data-mce-bogus', 'all');
       setAll(offscreenDiv, {
         position: 'fixed',
         left: '-9999999px',
@@ -12466,7 +12492,7 @@
         editor.selection.collapse(true);
       }
       if (selectedCells.length > 1 && exists(selectedCells, cell => eq(cell, selectedNode))) {
-        set$3(selectedNode, 'data-mce-selected', '1');
+        set$4(selectedNode, 'data-mce-selected', '1');
       }
     };
     const emptySingleTableCells = (editor, cells, outsideDetails) => Optional.some(() => {
@@ -13069,14 +13095,20 @@
         return false;
       }
     };
+    const isEditableEmptyBlock = (dom, node) => {
+      if (dom.isBlock(node) && dom.isEditable(node)) {
+        const childNodes = node.childNodes;
+        return childNodes.length === 1 && isBr$6(childNodes[0]) || childNodes.length === 0;
+      } else {
+        return false;
+      }
+    };
     const validInsertion = (editor, value, parentNode) => {
       var _a;
       if (parentNode.getAttribute('data-mce-bogus') === 'all') {
         (_a = parentNode.parentNode) === null || _a === void 0 ? void 0 : _a.insertBefore(editor.dom.createFragment(value), parentNode);
       } else {
-        const node = parentNode.firstChild;
-        const node2 = parentNode.lastChild;
-        if (!node || node === node2 && node.nodeName === 'BR') {
+        if (isEditableEmptyBlock(editor.dom, parentNode)) {
           editor.dom.setHTML(parentNode, value);
         } else {
           editor.selection.setContent(value, { no_events: true });
@@ -13783,7 +13815,7 @@
       if (hasContentAfter) {
         const bookmark = selection.getBookmark();
         rng.collapse(true);
-        let expandedRng = expandRng(dom, rng, formatList, true);
+        let expandedRng = expandRng(dom, rng, formatList, { includeTrailingSpace: true });
         expandedRng = split(expandedRng);
         editor.formatter.remove(name, vars, expandedRng, similar);
         selection.moveToBookmark(bookmark);
@@ -14345,7 +14377,7 @@
       const removeRngStyle = rng => {
         let startContainer;
         let endContainer;
-        let expandedRng = expandRng(dom, rng, formatList, rng.collapsed);
+        let expandedRng = expandRng(dom, rng, formatList, { includeTrailingSpace: rng.collapsed });
         if (format.split) {
           expandedRng = split(expandedRng);
           startContainer = getContainer(ed, expandedRng, true);
@@ -15001,13 +15033,21 @@
       const matches = /([a-z0-9+\/=\s]+)/i.exec(data);
       return matches ? matches[1] : '';
     };
+    const decodeData = data => {
+      try {
+        return decodeURIComponent(data);
+      } catch (_a) {
+        return data;
+      }
+    };
     const parseDataUri = uri => {
       const [type, ...rest] = uri.split(',');
       const data = rest.join(',');
       const matches = /data:([^/]+\/[^;]+)(;.+)?/.exec(type);
       if (matches) {
         const base64Encoded = matches[2] === ';base64';
-        const extractedData = base64Encoded ? extractBase64Data(data) : decodeURIComponent(data);
+        const decodedData = decodeData(data);
+        const extractedData = base64Encoded ? extractBase64Data(decodedData) : decodedData;
         return Optional.some({
           type: matches[1],
           data: extractedData,
@@ -15022,7 +15062,7 @@
       if (base64Encoded) {
         try {
           str = atob(data);
-        } catch (e) {
+        } catch (_a) {
           return Optional.none();
         }
       }
@@ -15274,7 +15314,7 @@
       }
     };
 
-    /*! @license DOMPurify 3.1.7 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.1.7/LICENSE */
+    /*! @license DOMPurify 3.2.4 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.2.4/LICENSE */
 
     const {
       entries,
@@ -15313,8 +15353,10 @@
       };
     }
     const arrayForEach = unapply(Array.prototype.forEach);
+    const arrayLastIndexOf = unapply(Array.prototype.lastIndexOf);
     const arrayPop = unapply(Array.prototype.pop);
     const arrayPush = unapply(Array.prototype.push);
+    const arraySplice = unapply(Array.prototype.splice);
     const stringToLowerCase = unapply(String.prototype.toLowerCase);
     const stringToString = unapply(String.prototype.toString);
     const stringMatch = unapply(String.prototype.match);
@@ -15324,12 +15366,11 @@
     const objectHasOwnProperty = unapply(Object.prototype.hasOwnProperty);
     const regExpTest = unapply(RegExp.prototype.test);
     const typeErrorCreate = unconstruct(TypeError);
-
     /**
      * Creates a new function that calls the given function with a specified thisArg and arguments.
      *
-     * @param {Function} func - The function to be wrapped and called.
-     * @returns {Function} A new function that calls the given function with a specified thisArg and arguments.
+     * @param func - The function to be wrapped and called.
+     * @returns A new function that calls the given function with a specified thisArg and arguments.
      */
     function unapply(func) {
       return function (thisArg) {
@@ -15339,12 +15380,11 @@
         return apply(func, thisArg, args);
       };
     }
-
     /**
      * Creates a new function that constructs an instance of the given constructor function with the provided arguments.
      *
-     * @param {Function} func - The constructor function to be wrapped and called.
-     * @returns {Function} A new function that constructs an instance of the given constructor function with the provided arguments.
+     * @param func - The constructor function to be wrapped and called.
+     * @returns A new function that constructs an instance of the given constructor function with the provided arguments.
      */
     function unconstruct(func) {
       return function () {
@@ -15354,14 +15394,13 @@
         return construct(func, args);
       };
     }
-
     /**
      * Add properties to a lookup table
      *
-     * @param {Object} set - The set to which elements will be added.
-     * @param {Array} array - The array containing elements to be added to the set.
-     * @param {Function} transformCaseFunc - An optional function to transform the case of each element before adding to the set.
-     * @returns {Object} The modified set with added elements.
+     * @param set - The set to which elements will be added.
+     * @param array - The array containing elements to be added to the set.
+     * @param transformCaseFunc - An optional function to transform the case of each element before adding to the set.
+     * @returns The modified set with added elements.
      */
     function addToSet(set, array) {
       let transformCaseFunc = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : stringToLowerCase;
@@ -15388,12 +15427,11 @@
       }
       return set;
     }
-
     /**
      * Clean up an array to harden against CSPP
      *
-     * @param {Array} array - The array to be cleaned.
-     * @returns {Array} The cleaned version of the array
+     * @param array - The array to be cleaned.
+     * @returns The cleaned version of the array
      */
     function cleanArray(array) {
       for (let index = 0; index < array.length; index++) {
@@ -15404,12 +15442,11 @@
       }
       return array;
     }
-
     /**
      * Shallow clone an object
      *
-     * @param {Object} object - The object to be cloned.
-     * @returns {Object} A new object that copies the original.
+     * @param object - The object to be cloned.
+     * @returns A new object that copies the original.
      */
     function clone(object) {
       const newObject = create$7(null);
@@ -15427,13 +15464,12 @@
       }
       return newObject;
     }
-
     /**
      * This method automatically checks if the prop is function or getter and behaves accordingly.
      *
-     * @param {Object} object - The object to look up the getter function in its prototype chain.
-     * @param {String} prop - The property name for which to find the getter function.
-     * @returns {Function} The getter function found in the prototype chain or a fallback function.
+     * @param object - The object to look up the getter function in its prototype chain.
+     * @param prop - The property name for which to find the getter function.
+     * @returns The getter function found in the prototype chain or a fallback function.
      */
     function lookupGetter(object, prop) {
       while (object !== null) {
@@ -15455,18 +15491,14 @@
     }
 
     const html$1 = freeze(['a', 'abbr', 'acronym', 'address', 'area', 'article', 'aside', 'audio', 'b', 'bdi', 'bdo', 'big', 'blink', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'content', 'data', 'datalist', 'dd', 'decorator', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl', 'dt', 'element', 'em', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'main', 'map', 'mark', 'marquee', 'menu', 'menuitem', 'meter', 'nav', 'nobr', 'ol', 'optgroup', 'option', 'output', 'p', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'section', 'select', 'shadow', 'small', 'source', 'spacer', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr']);
-
-    // SVG
     const svg$1 = freeze(['svg', 'a', 'altglyph', 'altglyphdef', 'altglyphitem', 'animatecolor', 'animatemotion', 'animatetransform', 'circle', 'clippath', 'defs', 'desc', 'ellipse', 'filter', 'font', 'g', 'glyph', 'glyphref', 'hkern', 'image', 'line', 'lineargradient', 'marker', 'mask', 'metadata', 'mpath', 'path', 'pattern', 'polygon', 'polyline', 'radialgradient', 'rect', 'stop', 'style', 'switch', 'symbol', 'text', 'textpath', 'title', 'tref', 'tspan', 'view', 'vkern']);
     const svgFilters = freeze(['feBlend', 'feColorMatrix', 'feComponentTransfer', 'feComposite', 'feConvolveMatrix', 'feDiffuseLighting', 'feDisplacementMap', 'feDistantLight', 'feDropShadow', 'feFlood', 'feFuncA', 'feFuncB', 'feFuncG', 'feFuncR', 'feGaussianBlur', 'feImage', 'feMerge', 'feMergeNode', 'feMorphology', 'feOffset', 'fePointLight', 'feSpecularLighting', 'feSpotLight', 'feTile', 'feTurbulence']);
-
     // List of SVG elements that are disallowed by default.
     // We still need to know them so that we can do namespace
     // checks properly in case one wants to add them to
     // allow-list.
     const svgDisallowed = freeze(['animate', 'color-profile', 'cursor', 'discard', 'font-face', 'font-face-format', 'font-face-name', 'font-face-src', 'font-face-uri', 'foreignobject', 'hatch', 'hatchpath', 'mesh', 'meshgradient', 'meshpatch', 'meshrow', 'missing-glyph', 'script', 'set', 'solidcolor', 'unknown', 'use']);
     const mathMl$1 = freeze(['math', 'menclose', 'merror', 'mfenced', 'mfrac', 'mglyph', 'mi', 'mlabeledtr', 'mmultiscripts', 'mn', 'mo', 'mover', 'mpadded', 'mphantom', 'mroot', 'mrow', 'ms', 'mspace', 'msqrt', 'mstyle', 'msub', 'msup', 'msubsup', 'mtable', 'mtd', 'mtext', 'mtr', 'munder', 'munderover', 'mprescripts']);
-
     // Similarly to SVG, we want to know all MathML elements,
     // even those that we disallow by default.
     const mathMlDisallowed = freeze(['maction', 'maligngroup', 'malignmark', 'mlongdiv', 'mscarries', 'mscarry', 'msgroup', 'mstack', 'msline', 'msrow', 'semantics', 'annotation', 'annotation-xml', 'mprescripts', 'none']);
@@ -15480,8 +15512,8 @@
     // eslint-disable-next-line unicorn/better-regex
     const MUSTACHE_EXPR = seal(/\{\{[\w\W]*|[\w\W]*\}\}/gm); // Specify template detection regex for SAFE_FOR_TEMPLATES mode
     const ERB_EXPR = seal(/<%[\w\W]*|[\w\W]*%>/gm);
-    const TMPLIT_EXPR = seal(/\${[\w\W]*}/gm);
-    const DATA_ATTR = seal(/^data-[\-\w.\u00B7-\uFFFF]/); // eslint-disable-line no-useless-escape
+    const TMPLIT_EXPR = seal(/\$\{[\w\W]*/gm); // eslint-disable-line unicorn/better-regex
+    const DATA_ATTR = seal(/^data-[\-\w.\u00B7-\uFFFF]+$/); // eslint-disable-line no-useless-escape
     const ARIA_ATTR = seal(/^aria-[\-\w]+$/); // eslint-disable-line no-useless-escape
     const IS_ALLOWED_URI = seal(/^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i // eslint-disable-line no-useless-escape
     );
@@ -15493,18 +15525,19 @@
 
     var EXPRESSIONS = /*#__PURE__*/Object.freeze({
       __proto__: null,
-      MUSTACHE_EXPR: MUSTACHE_EXPR,
-      ERB_EXPR: ERB_EXPR,
-      TMPLIT_EXPR: TMPLIT_EXPR,
-      DATA_ATTR: DATA_ATTR,
       ARIA_ATTR: ARIA_ATTR,
+      ATTR_WHITESPACE: ATTR_WHITESPACE,
+      CUSTOM_ELEMENT: CUSTOM_ELEMENT,
+      DATA_ATTR: DATA_ATTR,
+      DOCTYPE_NAME: DOCTYPE_NAME,
+      ERB_EXPR: ERB_EXPR,
       IS_ALLOWED_URI: IS_ALLOWED_URI,
       IS_SCRIPT_OR_DATA: IS_SCRIPT_OR_DATA,
-      ATTR_WHITESPACE: ATTR_WHITESPACE,
-      DOCTYPE_NAME: DOCTYPE_NAME,
-      CUSTOM_ELEMENT: CUSTOM_ELEMENT
+      MUSTACHE_EXPR: MUSTACHE_EXPR,
+      TMPLIT_EXPR: TMPLIT_EXPR
     });
 
+    /* eslint-disable @typescript-eslint/indent */
     // https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType
     const NODE_TYPE = {
       element: 1,
@@ -15525,20 +15558,18 @@
     const getGlobal = function getGlobal() {
       return typeof window === 'undefined' ? null : window;
     };
-
     /**
      * Creates a no-op policy for internal use only.
      * Don't export this function outside this module!
-     * @param {TrustedTypePolicyFactory} trustedTypes The policy factory.
-     * @param {HTMLScriptElement} purifyHostElement The Script element used to load DOMPurify (to determine policy name suffix).
-     * @return {TrustedTypePolicy} The policy created (or null, if Trusted Types
+     * @param trustedTypes The policy factory.
+     * @param purifyHostElement The Script element used to load DOMPurify (to determine policy name suffix).
+     * @return The policy created (or null, if Trusted Types
      * are not supported or creating the policy failed).
      */
     const _createTrustedTypesPolicy = function _createTrustedTypesPolicy(trustedTypes, purifyHostElement) {
       if (typeof trustedTypes !== 'object' || typeof trustedTypes.createPolicy !== 'function') {
         return null;
       }
-
       // Allow the callers to control the unique policy name
       // by adding a data-tt-policy-suffix to the script element with the DOMPurify.
       // Policy creation with duplicate names throws in Trusted Types.
@@ -15565,22 +15596,25 @@
         return null;
       }
     };
+    const _createHooksMap = function _createHooksMap() {
+      return {
+        afterSanitizeAttributes: [],
+        afterSanitizeElements: [],
+        afterSanitizeShadowDOM: [],
+        beforeSanitizeAttributes: [],
+        beforeSanitizeElements: [],
+        beforeSanitizeShadowDOM: [],
+        uponSanitizeAttribute: [],
+        uponSanitizeElement: [],
+        uponSanitizeShadowNode: []
+      };
+    };
     function createDOMPurify() {
       let window = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : getGlobal();
       const DOMPurify = root => createDOMPurify(root);
-
-      /**
-       * Version label, exposed for easier checks
-       * if DOMPurify is up to date or not
-       */
-      DOMPurify.version = '3.1.7';
-
-      /**
-       * Array of elements that DOMPurify removed during sanitation.
-       * Empty if nothing was removed.
-       */
+      DOMPurify.version = '3.2.4';
       DOMPurify.removed = [];
-      if (!window || !window.document || window.document.nodeType !== NODE_TYPE.document) {
+      if (!window || !window.document || window.document.nodeType !== NODE_TYPE.document || !window.Element) {
         // Not running in a browser, provide a factory function
         // so that you can pass your own Window
         DOMPurify.isSupported = false;
@@ -15608,7 +15642,6 @@
       const getNextSibling = lookupGetter(ElementPrototype, 'nextSibling');
       const getChildNodes = lookupGetter(ElementPrototype, 'childNodes');
       const getParentNode = lookupGetter(ElementPrototype, 'parentNode');
-
       // As per issue #47, the web-components registry is inherited by a
       // new document created via createHTMLDocument. As per the spec
       // (http://w3c.github.io/webcomponents/spec/custom/#creating-and-passing-registries)
@@ -15632,8 +15665,7 @@
       const {
         importNode
       } = originalDocument;
-      let hooks = {};
-
+      let hooks = _createHooksMap();
       /**
        * Expose whether this browser supports running the full DOMPurify.
        */
@@ -15651,22 +15683,18 @@
       let {
         IS_ALLOWED_URI: IS_ALLOWED_URI$1
       } = EXPRESSIONS;
-
       /**
        * We consider the elements and attributes below to be safe. Ideally
        * don't add any new ones but feel free to remove unwanted ones.
        */
-
       /* allowed element names */
       let ALLOWED_TAGS = null;
       const DEFAULT_ALLOWED_TAGS = addToSet({}, [...html$1, ...svg$1, ...svgFilters, ...mathMl$1, ...text]);
-
       /* Allowed attribute names */
       let ALLOWED_ATTR = null;
       const DEFAULT_ALLOWED_ATTR = addToSet({}, [...html, ...svg, ...mathMl, ...xml]);
-
       /*
-       * Configure how DOMPUrify should handle custom elements and their attributes as well as customized built-in elements.
+       * Configure how DOMPurify should handle custom elements and their attributes as well as customized built-in elements.
        * @property {RegExp|Function|null} tagNameCheck one of [null, regexPattern, predicate]. Default: `null` (disallow any custom elements)
        * @property {RegExp|Function|null} attributeNameCheck one of [null, regexPattern, predicate]. Default: `null` (disallow any attributes not on the allow list)
        * @property {boolean} allowCustomizedBuiltInElements allow custom elements derived from built-ins if they pass CUSTOM_ELEMENT_HANDLING.tagNameCheck. Default: `false`.
@@ -15691,65 +15719,49 @@
           value: false
         }
       }));
-
       /* Explicitly forbidden tags (overrides ALLOWED_TAGS/ADD_TAGS) */
       let FORBID_TAGS = null;
-
       /* Explicitly forbidden attributes (overrides ALLOWED_ATTR/ADD_ATTR) */
       let FORBID_ATTR = null;
-
       /* Decide if ARIA attributes are okay */
       let ALLOW_ARIA_ATTR = true;
-
       /* Decide if custom data attributes are okay */
       let ALLOW_DATA_ATTR = true;
-
       /* Decide if unknown protocols are okay */
       let ALLOW_UNKNOWN_PROTOCOLS = false;
-
       /* Decide if self-closing tags in attributes are allowed.
        * Usually removed due to a mXSS issue in jQuery 3.0 */
       let ALLOW_SELF_CLOSE_IN_ATTR = true;
-
       /* Output should be safe for common template engines.
        * This means, DOMPurify removes data attributes, mustaches and ERB
        */
       let SAFE_FOR_TEMPLATES = false;
-
       /* Output should be safe even for XML used within HTML and alike.
        * This means, DOMPurify removes comments when containing risky content.
        */
       let SAFE_FOR_XML = true;
-
       /* Decide if document with <html>... should be returned */
       let WHOLE_DOCUMENT = false;
-
       /* Track whether config is already set on this instance of DOMPurify. */
       let SET_CONFIG = false;
-
       /* Decide if all elements (e.g. style, script) must be children of
        * document.body. By default, browsers might move them to document.head */
       let FORCE_BODY = false;
-
       /* Decide if a DOM `HTMLBodyElement` should be returned, instead of a html
        * string (or a TrustedHTML object if Trusted Types are supported).
        * If `WHOLE_DOCUMENT` is enabled a `HTMLHtmlElement` will be returned instead
        */
       let RETURN_DOM = false;
-
       /* Decide if a DOM `DocumentFragment` should be returned, instead of a html
        * string  (or a TrustedHTML object if Trusted Types are supported) */
       let RETURN_DOM_FRAGMENT = false;
-
       /* Try to return a Trusted Type object instead of a string, return a string in
        * case Trusted Types are not supported  */
       let RETURN_TRUSTED_TYPE = false;
-
       /* Output should be free from DOM clobbering attacks?
        * This sanitizes markups named with colliding, clobberable built-in DOM APIs.
        */
       let SANITIZE_DOM = true;
-
       /* Achieve full DOM Clobbering protection by isolating the namespace of named
        * properties and JS variables, mitigating attacks that abuse the HTML/DOM spec rules.
        *
@@ -15765,25 +15777,19 @@
        */
       let SANITIZE_NAMED_PROPS = false;
       const SANITIZE_NAMED_PROPS_PREFIX = 'user-content-';
-
       /* Keep element content when removing element? */
       let KEEP_CONTENT = true;
-
       /* If a `Node` is passed to sanitize(), then performs sanitization in-place instead
        * of importing it into a new Document and returning a sanitized copy */
       let IN_PLACE = false;
-
       /* Allow usage of profiles like html, svg and mathMl */
       let USE_PROFILES = {};
-
       /* Tags to ignore content of when KEEP_CONTENT is true */
       let FORBID_CONTENTS = null;
       const DEFAULT_FORBID_CONTENTS = addToSet({}, ['annotation-xml', 'audio', 'colgroup', 'desc', 'foreignobject', 'head', 'iframe', 'math', 'mi', 'mn', 'mo', 'ms', 'mtext', 'noembed', 'noframes', 'noscript', 'plaintext', 'script', 'style', 'svg', 'template', 'thead', 'title', 'video', 'xmp']);
-
       /* Tags that are safe for data: URIs */
       let DATA_URI_TAGS = null;
       const DEFAULT_DATA_URI_TAGS = addToSet({}, ['audio', 'video', 'img', 'source', 'image', 'track']);
-
       /* Attributes safe for values like "javascript:" */
       let URI_SAFE_ATTRIBUTES = null;
       const DEFAULT_URI_SAFE_ATTRIBUTES = addToSet({}, ['alt', 'class', 'for', 'id', 'label', 'name', 'pattern', 'placeholder', 'role', 'summary', 'title', 'value', 'style', 'xmlns']);
@@ -15793,32 +15799,33 @@
       /* Document namespace */
       let NAMESPACE = HTML_NAMESPACE;
       let IS_EMPTY_INPUT = false;
-
       /* Allowed XHTML+XML namespaces */
       let ALLOWED_NAMESPACES = null;
       const DEFAULT_ALLOWED_NAMESPACES = addToSet({}, [MATHML_NAMESPACE, SVG_NAMESPACE, HTML_NAMESPACE], stringToString);
-
+      let MATHML_TEXT_INTEGRATION_POINTS = addToSet({}, ['mi', 'mo', 'mn', 'ms', 'mtext']);
+      let HTML_INTEGRATION_POINTS = addToSet({}, ['annotation-xml']);
+      // Certain elements are allowed in both SVG and HTML
+      // namespace. We need to specify them explicitly
+      // so that they don't get erroneously deleted from
+      // HTML namespace.
+      const COMMON_SVG_AND_HTML_ELEMENTS = addToSet({}, ['title', 'style', 'font', 'a', 'script']);
       /* Parsing of strict XHTML documents */
       let PARSER_MEDIA_TYPE = null;
       const SUPPORTED_PARSER_MEDIA_TYPES = ['application/xhtml+xml', 'text/html'];
       const DEFAULT_PARSER_MEDIA_TYPE = 'text/html';
       let transformCaseFunc = null;
-
       /* Keep a reference to config to pass to hooks */
       let CONFIG = null;
-
       /* Ideally, do not touch anything below this line */
       /* ______________________________________________ */
-
       const formElement = document.createElement('form');
       const isRegexOrFunction = function isRegexOrFunction(testValue) {
         return testValue instanceof RegExp || testValue instanceof Function;
       };
-
       /**
        * _parseConfig
        *
-       * @param  {Object} cfg optional config literal
+       * @param cfg optional config literal
        */
       // eslint-disable-next-line complexity
       const _parseConfig = function _parseConfig() {
@@ -15826,39 +15833,23 @@
         if (CONFIG && CONFIG === cfg) {
           return;
         }
-
         /* Shield configuration object from tampering */
         if (!cfg || typeof cfg !== 'object') {
           cfg = {};
         }
-
         /* Shield configuration object from prototype pollution */
         cfg = clone(cfg);
         PARSER_MEDIA_TYPE =
         // eslint-disable-next-line unicorn/prefer-includes
         SUPPORTED_PARSER_MEDIA_TYPES.indexOf(cfg.PARSER_MEDIA_TYPE) === -1 ? DEFAULT_PARSER_MEDIA_TYPE : cfg.PARSER_MEDIA_TYPE;
-
         // HTML tags and attributes are not case-sensitive, converting to lowercase. Keeping XHTML as is.
         transformCaseFunc = PARSER_MEDIA_TYPE === 'application/xhtml+xml' ? stringToString : stringToLowerCase;
-
         /* Set configuration parameters */
         ALLOWED_TAGS = objectHasOwnProperty(cfg, 'ALLOWED_TAGS') ? addToSet({}, cfg.ALLOWED_TAGS, transformCaseFunc) : DEFAULT_ALLOWED_TAGS;
         ALLOWED_ATTR = objectHasOwnProperty(cfg, 'ALLOWED_ATTR') ? addToSet({}, cfg.ALLOWED_ATTR, transformCaseFunc) : DEFAULT_ALLOWED_ATTR;
         ALLOWED_NAMESPACES = objectHasOwnProperty(cfg, 'ALLOWED_NAMESPACES') ? addToSet({}, cfg.ALLOWED_NAMESPACES, stringToString) : DEFAULT_ALLOWED_NAMESPACES;
-        URI_SAFE_ATTRIBUTES = objectHasOwnProperty(cfg, 'ADD_URI_SAFE_ATTR') ? addToSet(clone(DEFAULT_URI_SAFE_ATTRIBUTES),
-        // eslint-disable-line indent
-        cfg.ADD_URI_SAFE_ATTR,
-        // eslint-disable-line indent
-        transformCaseFunc // eslint-disable-line indent
-        ) // eslint-disable-line indent
-        : DEFAULT_URI_SAFE_ATTRIBUTES;
-        DATA_URI_TAGS = objectHasOwnProperty(cfg, 'ADD_DATA_URI_TAGS') ? addToSet(clone(DEFAULT_DATA_URI_TAGS),
-        // eslint-disable-line indent
-        cfg.ADD_DATA_URI_TAGS,
-        // eslint-disable-line indent
-        transformCaseFunc // eslint-disable-line indent
-        ) // eslint-disable-line indent
-        : DEFAULT_DATA_URI_TAGS;
+        URI_SAFE_ATTRIBUTES = objectHasOwnProperty(cfg, 'ADD_URI_SAFE_ATTR') ? addToSet(clone(DEFAULT_URI_SAFE_ATTRIBUTES), cfg.ADD_URI_SAFE_ATTR, transformCaseFunc) : DEFAULT_URI_SAFE_ATTRIBUTES;
+        DATA_URI_TAGS = objectHasOwnProperty(cfg, 'ADD_DATA_URI_TAGS') ? addToSet(clone(DEFAULT_DATA_URI_TAGS), cfg.ADD_DATA_URI_TAGS, transformCaseFunc) : DEFAULT_DATA_URI_TAGS;
         FORBID_CONTENTS = objectHasOwnProperty(cfg, 'FORBID_CONTENTS') ? addToSet({}, cfg.FORBID_CONTENTS, transformCaseFunc) : DEFAULT_FORBID_CONTENTS;
         FORBID_TAGS = objectHasOwnProperty(cfg, 'FORBID_TAGS') ? addToSet({}, cfg.FORBID_TAGS, transformCaseFunc) : {};
         FORBID_ATTR = objectHasOwnProperty(cfg, 'FORBID_ATTR') ? addToSet({}, cfg.FORBID_ATTR, transformCaseFunc) : {};
@@ -15880,6 +15871,8 @@
         IN_PLACE = cfg.IN_PLACE || false; // Default false
         IS_ALLOWED_URI$1 = cfg.ALLOWED_URI_REGEXP || IS_ALLOWED_URI;
         NAMESPACE = cfg.NAMESPACE || HTML_NAMESPACE;
+        MATHML_TEXT_INTEGRATION_POINTS = cfg.MATHML_TEXT_INTEGRATION_POINTS || MATHML_TEXT_INTEGRATION_POINTS;
+        HTML_INTEGRATION_POINTS = cfg.HTML_INTEGRATION_POINTS || HTML_INTEGRATION_POINTS;
         CUSTOM_ELEMENT_HANDLING = cfg.CUSTOM_ELEMENT_HANDLING || {};
         if (cfg.CUSTOM_ELEMENT_HANDLING && isRegexOrFunction(cfg.CUSTOM_ELEMENT_HANDLING.tagNameCheck)) {
           CUSTOM_ELEMENT_HANDLING.tagNameCheck = cfg.CUSTOM_ELEMENT_HANDLING.tagNameCheck;
@@ -15896,7 +15889,6 @@
         if (RETURN_DOM_FRAGMENT) {
           RETURN_DOM = true;
         }
-
         /* Parse profile info */
         if (USE_PROFILES) {
           ALLOWED_TAGS = addToSet({}, text);
@@ -15921,7 +15913,6 @@
             addToSet(ALLOWED_ATTR, xml);
           }
         }
-
         /* Merge configuration parameters */
         if (cfg.ADD_TAGS) {
           if (ALLOWED_TAGS === DEFAULT_ALLOWED_TAGS) {
@@ -15944,17 +15935,14 @@
           }
           addToSet(FORBID_CONTENTS, cfg.FORBID_CONTENTS, transformCaseFunc);
         }
-
         /* Add #text in case KEEP_CONTENT is set to true */
         if (KEEP_CONTENT) {
           ALLOWED_TAGS['#text'] = true;
         }
-
         /* Add html, head and body to ALLOWED_TAGS in case WHOLE_DOCUMENT is true */
         if (WHOLE_DOCUMENT) {
           addToSet(ALLOWED_TAGS, ['html', 'head', 'body']);
         }
-
         /* Add tbody to ALLOWED_TAGS in case tables are permitted, see #286, #365 */
         if (ALLOWED_TAGS.table) {
           addToSet(ALLOWED_TAGS, ['tbody']);
@@ -15967,10 +15955,8 @@
           if (typeof cfg.TRUSTED_TYPES_POLICY.createScriptURL !== 'function') {
             throw typeErrorCreate('TRUSTED_TYPES_POLICY configuration option must provide a "createScriptURL" hook.');
           }
-
           // Overwrite existing TrustedTypes policy.
           trustedTypesPolicy = cfg.TRUSTED_TYPES_POLICY;
-
           // Sign local variables required by `sanitize`.
           emptyHTML = trustedTypesPolicy.createHTML('');
         } else {
@@ -15978,13 +15964,11 @@
           if (trustedTypesPolicy === undefined) {
             trustedTypesPolicy = _createTrustedTypesPolicy(trustedTypes, currentScript);
           }
-
           // If creating the internal policy succeeded sign internal variables.
           if (trustedTypesPolicy !== null && typeof emptyHTML === 'string') {
             emptyHTML = trustedTypesPolicy.createHTML('');
           }
         }
-
         // Prevent further manipulation of configuration.
         // Not available in IE8, Safari 5, etc.
         if (freeze) {
@@ -15992,30 +15976,19 @@
         }
         CONFIG = cfg;
       };
-      const MATHML_TEXT_INTEGRATION_POINTS = addToSet({}, ['mi', 'mo', 'mn', 'ms', 'mtext']);
-      const HTML_INTEGRATION_POINTS = addToSet({}, ['annotation-xml']);
-
-      // Certain elements are allowed in both SVG and HTML
-      // namespace. We need to specify them explicitly
-      // so that they don't get erroneously deleted from
-      // HTML namespace.
-      const COMMON_SVG_AND_HTML_ELEMENTS = addToSet({}, ['title', 'style', 'font', 'a', 'script']);
-
       /* Keep track of all possible SVG and MathML tags
        * so that we can perform the namespace checks
        * correctly. */
       const ALL_SVG_TAGS = addToSet({}, [...svg$1, ...svgFilters, ...svgDisallowed]);
       const ALL_MATHML_TAGS = addToSet({}, [...mathMl$1, ...mathMlDisallowed]);
-
       /**
-       * @param  {Element} element a DOM element whose namespace is being checked
-       * @returns {boolean} Return false if the element has a
+       * @param element a DOM element whose namespace is being checked
+       * @returns Return false if the element has a
        *  namespace that a spec-compliant parser would never
        *  return. Return true otherwise.
        */
       const _checkValidNamespace = function _checkValidNamespace(element) {
         let parent = getParentNode(element);
-
         // In JSDOM, if we're inside shadow DOM, then parentNode
         // can be null. We just simulate parent in this case.
         if (!parent || !parent.tagName) {
@@ -16036,14 +16009,12 @@
           if (parent.namespaceURI === HTML_NAMESPACE) {
             return tagName === 'svg';
           }
-
           // The only way to switch from MathML to SVG is via`
           // svg if parent is either <annotation-xml> or MathML
           // text integration points.
           if (parent.namespaceURI === MATHML_NAMESPACE) {
             return tagName === 'svg' && (parentTagName === 'annotation-xml' || MATHML_TEXT_INTEGRATION_POINTS[parentTagName]);
           }
-
           // We only allow elements that are defined in SVG
           // spec. All others are disallowed in SVG namespace.
           return Boolean(ALL_SVG_TAGS[tagName]);
@@ -16055,13 +16026,11 @@
           if (parent.namespaceURI === HTML_NAMESPACE) {
             return tagName === 'math';
           }
-
           // The only way to switch from SVG to MathML is via
           // <math> and HTML integration points
           if (parent.namespaceURI === SVG_NAMESPACE) {
             return tagName === 'math' && HTML_INTEGRATION_POINTS[parentTagName];
           }
-
           // We only allow elements that are defined in MathML
           // spec. All others are disallowed in MathML namespace.
           return Boolean(ALL_MATHML_TAGS[tagName]);
@@ -16076,28 +16045,24 @@
           if (parent.namespaceURI === MATHML_NAMESPACE && !MATHML_TEXT_INTEGRATION_POINTS[parentTagName]) {
             return false;
           }
-
           // We disallow tags that are specific for MathML
           // or SVG and should never appear in HTML namespace
           return !ALL_MATHML_TAGS[tagName] && (COMMON_SVG_AND_HTML_ELEMENTS[tagName] || !ALL_SVG_TAGS[tagName]);
         }
-
         // For XHTML and XML documents that support custom namespaces
         if (PARSER_MEDIA_TYPE === 'application/xhtml+xml' && ALLOWED_NAMESPACES[element.namespaceURI]) {
           return true;
         }
-
         // The code should never reach this place (this means
         // that the element somehow got namespace that is not
         // HTML, SVG, MathML or allowed via ALLOWED_NAMESPACES).
         // Return false just in case.
         return false;
       };
-
       /**
        * _forceRemove
        *
-       * @param  {Node} node a DOM node
+       * @param node a DOM node
        */
       const _forceRemove = function _forceRemove(node) {
         arrayPush(DOMPurify.removed, {
@@ -16110,46 +16075,43 @@
           remove(node);
         }
       };
-
       /**
        * _removeAttribute
        *
-       * @param  {String} name an Attribute name
-       * @param  {Node} node a DOM node
+       * @param name an Attribute name
+       * @param element a DOM node
        */
-      const _removeAttribute = function _removeAttribute(name, node) {
+      const _removeAttribute = function _removeAttribute(name, element) {
         try {
           arrayPush(DOMPurify.removed, {
-            attribute: node.getAttributeNode(name),
-            from: node
+            attribute: element.getAttributeNode(name),
+            from: element
           });
         } catch (_) {
           arrayPush(DOMPurify.removed, {
             attribute: null,
-            from: node
+            from: element
           });
         }
-        node.removeAttribute(name);
-
-        // We void attribute values for unremovable "is"" attributes
-        if (name === 'is' && !ALLOWED_ATTR[name]) {
+        element.removeAttribute(name);
+        // We void attribute values for unremovable "is" attributes
+        if (name === 'is') {
           if (RETURN_DOM || RETURN_DOM_FRAGMENT) {
             try {
-              _forceRemove(node);
+              _forceRemove(element);
             } catch (_) {}
           } else {
             try {
-              node.setAttribute(name, '');
+              element.setAttribute(name, '');
             } catch (_) {}
           }
         }
       };
-
       /**
        * _initDocument
        *
-       * @param  {String} dirty a string of dirty markup
-       * @return {Document} a DOM, filled with the dirty markup
+       * @param dirty - a string of dirty markup
+       * @return a DOM, filled with the dirty markup
        */
       const _initDocument = function _initDocument(dirty) {
         /* Create a HTML document */
@@ -16176,7 +16138,6 @@
             doc = new DOMParser().parseFromString(dirtyPayload, PARSER_MEDIA_TYPE);
           } catch (_) {}
         }
-
         /* Use createHTMLDocument in case DOMParser is not available */
         if (!doc || !doc.documentElement) {
           doc = implementation.createDocument(NAMESPACE, 'template', null);
@@ -16190,112 +16151,86 @@
         if (dirty && leadingWhitespace) {
           body.insertBefore(document.createTextNode(leadingWhitespace), body.childNodes[0] || null);
         }
-
         /* Work on whole document or just its body */
         if (NAMESPACE === HTML_NAMESPACE) {
           return getElementsByTagName.call(doc, WHOLE_DOCUMENT ? 'html' : 'body')[0];
         }
         return WHOLE_DOCUMENT ? doc.documentElement : body;
       };
-
       /**
        * Creates a NodeIterator object that you can use to traverse filtered lists of nodes or elements in a document.
        *
-       * @param  {Node} root The root element or node to start traversing on.
-       * @return {NodeIterator} The created NodeIterator
+       * @param root The root element or node to start traversing on.
+       * @return The created NodeIterator
        */
       const _createNodeIterator = function _createNodeIterator(root) {
         return createNodeIterator.call(root.ownerDocument || root, root,
         // eslint-disable-next-line no-bitwise
         NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
       };
-
       /**
        * _isClobbered
        *
-       * @param  {Node} elm element to check for clobbering attacks
-       * @return {Boolean} true if clobbered, false if safe
+       * @param element element to check for clobbering attacks
+       * @return true if clobbered, false if safe
        */
-      const _isClobbered = function _isClobbered(elm) {
-        return elm instanceof HTMLFormElement && (typeof elm.nodeName !== 'string' || typeof elm.textContent !== 'string' || typeof elm.removeChild !== 'function' || !(elm.attributes instanceof NamedNodeMap) || typeof elm.removeAttribute !== 'function' || typeof elm.setAttribute !== 'function' || typeof elm.namespaceURI !== 'string' || typeof elm.insertBefore !== 'function' || typeof elm.hasChildNodes !== 'function');
+      const _isClobbered = function _isClobbered(element) {
+        return element instanceof HTMLFormElement && (typeof element.nodeName !== 'string' || typeof element.textContent !== 'string' || typeof element.removeChild !== 'function' || !(element.attributes instanceof NamedNodeMap) || typeof element.removeAttribute !== 'function' || typeof element.setAttribute !== 'function' || typeof element.namespaceURI !== 'string' || typeof element.insertBefore !== 'function' || typeof element.hasChildNodes !== 'function');
       };
-
       /**
        * Checks whether the given object is a DOM node.
        *
-       * @param  {Node} object object to check whether it's a DOM node
-       * @return {Boolean} true is object is a DOM node
+       * @param value object to check whether it's a DOM node
+       * @return true is object is a DOM node
        */
-      const _isNode = function _isNode(object) {
-        return typeof Node === 'function' && object instanceof Node;
+      const _isNode = function _isNode(value) {
+        return typeof Node === 'function' && value instanceof Node;
       };
-
-      /**
-       * _executeHook
-       * Execute user configurable hooks
-       *
-       * @param  {String} entryPoint  Name of the hook's entry point
-       * @param  {Node} currentNode node to work on with the hook
-       * @param  {Object} data additional hook parameters
-       */
-      const _executeHook = function _executeHook(entryPoint, currentNode, data) {
-        if (!hooks[entryPoint]) {
-          return;
-        }
-        arrayForEach(hooks[entryPoint], hook => {
+      function _executeHooks(hooks, currentNode, data) {
+        arrayForEach(hooks, hook => {
           hook.call(DOMPurify, currentNode, data, CONFIG);
         });
-      };
-
+      }
       /**
        * _sanitizeElements
        *
        * @protect nodeName
        * @protect textContent
        * @protect removeChild
-       *
-       * @param   {Node} currentNode to check for permission to exist
-       * @return  {Boolean} true if node was killed, false if left alive
+       * @param currentNode to check for permission to exist
+       * @return true if node was killed, false if left alive
        */
       const _sanitizeElements = function _sanitizeElements(currentNode) {
         let content = null;
-
         /* Execute a hook if present */
-        _executeHook('beforeSanitizeElements', currentNode, null);
-
+        _executeHooks(hooks.beforeSanitizeElements, currentNode, null);
         /* Check if element is clobbered or can clobber */
         if (_isClobbered(currentNode)) {
           _forceRemove(currentNode);
           return true;
         }
-
         /* Now let's check the element's type and name */
         const tagName = transformCaseFunc(currentNode.nodeName);
-
         /* Execute a hook if present */
-        _executeHook('uponSanitizeElement', currentNode, {
+        _executeHooks(hooks.uponSanitizeElement, currentNode, {
           tagName,
           allowedTags: ALLOWED_TAGS
         });
-
         /* Detect mXSS attempts abusing namespace confusion */
         if (currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(/<[/\w]/g, currentNode.innerHTML) && regExpTest(/<[/\w]/g, currentNode.textContent)) {
           _forceRemove(currentNode);
           return true;
         }
-
         /* Remove any occurrence of processing instructions */
         if (currentNode.nodeType === NODE_TYPE.progressingInstruction) {
           _forceRemove(currentNode);
           return true;
         }
-
         /* Remove any kind of possibly harmful comments */
         if (SAFE_FOR_XML && currentNode.nodeType === NODE_TYPE.comment && regExpTest(/<[/\w]/g, currentNode.data)) {
           _forceRemove(currentNode);
           return true;
         }
-
         /* Remove element if anything forbids its presence */
         if (!ALLOWED_TAGS[tagName] || FORBID_TAGS[tagName]) {
           /* Check if we have a custom element to handle */
@@ -16307,7 +16242,6 @@
               return false;
             }
           }
-
           /* Keep content except for bad-listed elements */
           if (KEEP_CONTENT && !FORBID_CONTENTS[tagName]) {
             const parentNode = getParentNode(currentNode) || currentNode.parentNode;
@@ -16324,19 +16258,16 @@
           _forceRemove(currentNode);
           return true;
         }
-
         /* Check whether element has a valid namespace */
         if (currentNode instanceof Element && !_checkValidNamespace(currentNode)) {
           _forceRemove(currentNode);
           return true;
         }
-
         /* Make sure that older browsers don't get fallback-tag mXSS */
         if ((tagName === 'noscript' || tagName === 'noembed' || tagName === 'noframes') && regExpTest(/<\/no(script|embed|frames)/i, currentNode.innerHTML)) {
           _forceRemove(currentNode);
           return true;
         }
-
         /* Sanitize element content to be template-safe */
         if (SAFE_FOR_TEMPLATES && currentNode.nodeType === NODE_TYPE.text) {
           /* Get the element's text content */
@@ -16351,19 +16282,17 @@
             currentNode.textContent = content;
           }
         }
-
         /* Execute a hook if present */
-        _executeHook('afterSanitizeElements', currentNode, null);
+        _executeHooks(hooks.afterSanitizeElements, currentNode, null);
         return false;
       };
-
       /**
        * _isValidAttribute
        *
-       * @param  {string} lcTag Lowercase tag name of containing element.
-       * @param  {string} lcName Lowercase attribute name.
-       * @param  {string} value Attribute value.
-       * @return {Boolean} Returns true if `value` is valid, otherwise false.
+       * @param lcTag Lowercase tag name of containing element.
+       * @param lcName Lowercase attribute name.
+       * @param value Attribute value.
+       * @return Returns true if `value` is valid, otherwise false.
        */
       // eslint-disable-next-line complexity
       const _isValidAttribute = function _isValidAttribute(lcTag, lcName, value) {
@@ -16371,7 +16300,6 @@
         if (SANITIZE_DOM && (lcName === 'id' || lcName === 'name') && (value in document || value in formElement)) {
           return false;
         }
-
         /* Allow valid data-* attributes: At least one character after "-"
             (https://html.spec.whatwg.org/multipage/dom.html#embedding-custom-non-visible-data-with-the-data-*-attributes)
             XML-compatible (https://html.spec.whatwg.org/multipage/infrastructure.html#xml-compatible and http://www.w3.org/TR/xml/#d0e804)
@@ -16393,19 +16321,17 @@
         } else ;
         return true;
       };
-
       /**
        * _isBasicCustomElement
        * checks if at least one dash is included in tagName, and it's not the first char
        * for more sophisticated checking see https://github.com/sindresorhus/validate-element-name
        *
-       * @param {string} tagName name of the tag of the node to sanitize
-       * @returns {boolean} Returns true if the tag name meets the basic criteria for a custom element, otherwise false.
+       * @param tagName name of the tag of the node to sanitize
+       * @returns Returns true if the tag name meets the basic criteria for a custom element, otherwise false.
        */
       const _isBasicCustomElement = function _isBasicCustomElement(tagName) {
         return tagName !== 'annotation-xml' && stringMatch(tagName, CUSTOM_ELEMENT);
       };
-
       /**
        * _sanitizeAttributes
        *
@@ -16414,27 +16340,26 @@
        * @protect removeAttribute
        * @protect setAttribute
        *
-       * @param  {Node} currentNode to sanitize
+       * @param currentNode to sanitize
        */
       const _sanitizeAttributes = function _sanitizeAttributes(currentNode) {
         /* Execute a hook if present */
-        _executeHook('beforeSanitizeAttributes', currentNode, null);
+        _executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
         const {
           attributes
         } = currentNode;
-
         /* Check if we have attributes; if not we might have a text node */
-        if (!attributes) {
+        if (!attributes || _isClobbered(currentNode)) {
           return;
         }
         const hookEvent = {
           attrName: '',
           attrValue: '',
           keepAttr: true,
-          allowedAttributes: ALLOWED_ATTR
+          allowedAttributes: ALLOWED_ATTR,
+          forceKeepAttr: undefined
         };
         let l = attributes.length;
-
         /* Go backwards over all attributes; safely remove bad ones */
         while (l--) {
           const attr = attributes[l];
@@ -16446,65 +16371,54 @@
           const lcName = transformCaseFunc(name);
           let value = name === 'value' ? attrValue : stringTrim(attrValue);
           const initValue = value;
-
           /* Execute a hook if present */
           hookEvent.attrName = lcName;
           hookEvent.attrValue = value;
           hookEvent.keepAttr = true;
           hookEvent.forceKeepAttr = undefined; // Allows developers to see this is a property they can set
-          _executeHook('uponSanitizeAttribute', currentNode, hookEvent);
+          _executeHooks(hooks.uponSanitizeAttribute, currentNode, hookEvent);
           value = hookEvent.attrValue;
-
-          /* Did the hooks approve of the attribute? */
-          if (hookEvent.forceKeepAttr) {
-            continue;
-          }
-
-          /* Remove attribute */
-
-          /* Did the hooks approve of the attribute? */
-          if (!hookEvent.keepAttr) {
-            _removeAttribute(name, currentNode);
-            continue;
-          }
-
-          /* Work around a security issue in jQuery 3.0 */
-          if (!ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(/\/>/i, value)) {
-            _removeAttribute(name, currentNode);
-            continue;
-          }
-
-          /* Sanitize attribute content to be template-safe */
-          if (SAFE_FOR_TEMPLATES) {
-            arrayForEach([MUSTACHE_EXPR, ERB_EXPR, TMPLIT_EXPR], expr => {
-              value = stringReplace(value, expr, ' ');
-            });
-          }
-
-          /* Is `value` valid for this attribute? */
-          const lcTag = transformCaseFunc(currentNode.nodeName);
-          if (!_isValidAttribute(lcTag, lcName, value)) {
-            _removeAttribute(name, currentNode);
-            continue;
-          }
-
           /* Full DOM Clobbering protection via namespace isolation,
            * Prefix id and name attributes with `user-content-`
            */
           if (SANITIZE_NAMED_PROPS && (lcName === 'id' || lcName === 'name')) {
             // Remove the attribute with this value
             _removeAttribute(name, currentNode);
-
             // Prefix the value and later re-create the attribute with the sanitized value
             value = SANITIZE_NAMED_PROPS_PREFIX + value;
           }
-
           /* Work around a security issue with comments inside attributes */
           if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|title)/i, value)) {
             _removeAttribute(name, currentNode);
             continue;
           }
-
+          /* Did the hooks approve of the attribute? */
+          if (hookEvent.forceKeepAttr) {
+            continue;
+          }
+          /* Remove attribute */
+          /* Did the hooks approve of the attribute? */
+          if (!hookEvent.keepAttr) {
+            _removeAttribute(name, currentNode);
+            continue;
+          }
+          /* Work around a security issue in jQuery 3.0 */
+          if (!ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(/\/>/i, value)) {
+            _removeAttribute(name, currentNode);
+            continue;
+          }
+          /* Sanitize attribute content to be template-safe */
+          if (SAFE_FOR_TEMPLATES) {
+            arrayForEach([MUSTACHE_EXPR, ERB_EXPR, TMPLIT_EXPR], expr => {
+              value = stringReplace(value, expr, ' ');
+            });
+          }
+          /* Is `value` valid for this attribute? */
+          const lcTag = transformCaseFunc(currentNode.nodeName);
+          if (!_isValidAttribute(lcTag, lcName, value)) {
+            _removeAttribute(name, currentNode);
+            continue;
+          }
           /* Handle attributes that require Trusted Types */
           if (trustedTypesPolicy && typeof trustedTypes === 'object' && typeof trustedTypes.getAttributeType === 'function') {
             if (namespaceURI) ; else {
@@ -16522,7 +16436,6 @@
               }
             }
           }
-
           /* Handle invalid data-* attribute set by try-catching it */
           if (value !== initValue) {
             try {
@@ -16540,51 +16453,34 @@
             } catch (_) {}
           }
         }
-
         /* Execute a hook if present */
-        _executeHook('afterSanitizeAttributes', currentNode, null);
+        _executeHooks(hooks.afterSanitizeAttributes, currentNode, null);
       };
-
       /**
        * _sanitizeShadowDOM
        *
-       * @param  {DocumentFragment} fragment to iterate over recursively
+       * @param fragment to iterate over recursively
        */
       const _sanitizeShadowDOM = function _sanitizeShadowDOM(fragment) {
         let shadowNode = null;
         const shadowIterator = _createNodeIterator(fragment);
-
         /* Execute a hook if present */
-        _executeHook('beforeSanitizeShadowDOM', fragment, null);
+        _executeHooks(hooks.beforeSanitizeShadowDOM, fragment, null);
         while (shadowNode = shadowIterator.nextNode()) {
           /* Execute a hook if present */
-          _executeHook('uponSanitizeShadowNode', shadowNode, null);
-
+          _executeHooks(hooks.uponSanitizeShadowNode, shadowNode, null);
           /* Sanitize tags and elements */
-          if (_sanitizeElements(shadowNode)) {
-            continue;
-          }
-
+          _sanitizeElements(shadowNode);
+          /* Check attributes next */
+          _sanitizeAttributes(shadowNode);
           /* Deep shadow DOM detected */
           if (shadowNode.content instanceof DocumentFragment) {
             _sanitizeShadowDOM(shadowNode.content);
           }
-
-          /* Check attributes, sanitize if necessary */
-          _sanitizeAttributes(shadowNode);
         }
-
         /* Execute a hook if present */
-        _executeHook('afterSanitizeShadowDOM', fragment, null);
+        _executeHooks(hooks.afterSanitizeShadowDOM, fragment, null);
       };
-
-      /**
-       * Sanitize
-       * Public method providing core sanitation functionality
-       *
-       * @param {String|Node} dirty string or DOM node
-       * @param {Object} cfg object
-       */
       // eslint-disable-next-line complexity
       DOMPurify.sanitize = function (dirty) {
         let cfg = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -16599,7 +16495,6 @@
         if (IS_EMPTY_INPUT) {
           dirty = '<!-->';
         }
-
         /* Stringify, in case dirty is an object */
         if (typeof dirty !== 'string' && !_isNode(dirty)) {
           if (typeof dirty.toString === 'function') {
@@ -16611,20 +16506,16 @@
             throw typeErrorCreate('toString is not a function');
           }
         }
-
         /* Return dirty HTML if DOMPurify cannot run */
         if (!DOMPurify.isSupported) {
           return dirty;
         }
-
         /* Assign config vars */
         if (!SET_CONFIG) {
           _parseConfig(cfg);
         }
-
         /* Clean up removed elements */
         DOMPurify.removed = [];
-
         /* Check if dirty is correctly typed for IN_PLACE */
         if (typeof dirty === 'string') {
           IN_PLACE = false;
@@ -16658,45 +16549,34 @@
           dirty.indexOf('<') === -1) {
             return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? trustedTypesPolicy.createHTML(dirty) : dirty;
           }
-
           /* Initialize the document to work on */
           body = _initDocument(dirty);
-
           /* Check we have a DOM node from the data */
           if (!body) {
             return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML : '';
           }
         }
-
         /* Remove first element node (ours) if FORCE_BODY is set */
         if (body && FORCE_BODY) {
           _forceRemove(body.firstChild);
         }
-
         /* Get node iterator */
         const nodeIterator = _createNodeIterator(IN_PLACE ? dirty : body);
-
         /* Now start iterating over the created document */
         while (currentNode = nodeIterator.nextNode()) {
           /* Sanitize tags and elements */
-          if (_sanitizeElements(currentNode)) {
-            continue;
-          }
-
+          _sanitizeElements(currentNode);
+          /* Check attributes next */
+          _sanitizeAttributes(currentNode);
           /* Shadow DOM detected, sanitize it */
           if (currentNode.content instanceof DocumentFragment) {
             _sanitizeShadowDOM(currentNode.content);
           }
-
-          /* Check attributes, sanitize if necessary */
-          _sanitizeAttributes(currentNode);
         }
-
         /* If we sanitized `dirty` in-place, return it. */
         if (IN_PLACE) {
           return dirty;
         }
-
         /* Return sanitized string or DOM */
         if (RETURN_DOM) {
           if (RETURN_DOM_FRAGMENT) {
@@ -16721,12 +16601,10 @@
           return returnNode;
         }
         let serializedHTML = WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
-
         /* Serialize doctype if allowed */
         if (WHOLE_DOCUMENT && ALLOWED_TAGS['!doctype'] && body.ownerDocument && body.ownerDocument.doctype && body.ownerDocument.doctype.name && regExpTest(DOCTYPE_NAME, body.ownerDocument.doctype.name)) {
           serializedHTML = '<!DOCTYPE ' + body.ownerDocument.doctype.name + '>\n' + serializedHTML;
         }
-
         /* Sanitize final string template-safe */
         if (SAFE_FOR_TEMPLATES) {
           arrayForEach([MUSTACHE_EXPR, ERB_EXPR, TMPLIT_EXPR], expr => {
@@ -16735,39 +16613,15 @@
         }
         return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? trustedTypesPolicy.createHTML(serializedHTML) : serializedHTML;
       };
-
-      /**
-       * Public method to set the configuration once
-       * setConfig
-       *
-       * @param {Object} cfg configuration object
-       */
       DOMPurify.setConfig = function () {
         let cfg = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         _parseConfig(cfg);
         SET_CONFIG = true;
       };
-
-      /**
-       * Public method to remove the configuration
-       * clearConfig
-       *
-       */
       DOMPurify.clearConfig = function () {
         CONFIG = null;
         SET_CONFIG = false;
       };
-
-      /**
-       * Public method to check if an attribute value is valid.
-       * Uses last set config, if any. Otherwise, uses config defaults.
-       * isValidAttribute
-       *
-       * @param  {String} tag Tag name of containing element.
-       * @param  {String} attr Attribute name.
-       * @param  {String} value Attribute value.
-       * @return {Boolean} Returns true if `value` is valid. Otherwise, returns false.
-       */
       DOMPurify.isValidAttribute = function (tag, attr, value) {
         /* Initialize shared config vars if necessary. */
         if (!CONFIG) {
@@ -16777,54 +16631,24 @@
         const lcName = transformCaseFunc(attr);
         return _isValidAttribute(lcTag, lcName, value);
       };
-
-      /**
-       * AddHook
-       * Public method to add DOMPurify hooks
-       *
-       * @param {String} entryPoint entry point for the hook to add
-       * @param {Function} hookFunction function to execute
-       */
       DOMPurify.addHook = function (entryPoint, hookFunction) {
         if (typeof hookFunction !== 'function') {
           return;
         }
-        hooks[entryPoint] = hooks[entryPoint] || [];
         arrayPush(hooks[entryPoint], hookFunction);
       };
-
-      /**
-       * RemoveHook
-       * Public method to remove a DOMPurify hook at a given entryPoint
-       * (pops it from the stack of hooks if more are present)
-       *
-       * @param {String} entryPoint entry point for the hook to remove
-       * @return {Function} removed(popped) hook
-       */
-      DOMPurify.removeHook = function (entryPoint) {
-        if (hooks[entryPoint]) {
-          return arrayPop(hooks[entryPoint]);
+      DOMPurify.removeHook = function (entryPoint, hookFunction) {
+        if (hookFunction !== undefined) {
+          const index = arrayLastIndexOf(hooks[entryPoint], hookFunction);
+          return index === -1 ? undefined : arraySplice(hooks[entryPoint], index, 1)[0];
         }
+        return arrayPop(hooks[entryPoint]);
       };
-
-      /**
-       * RemoveHooks
-       * Public method to remove all DOMPurify hooks at a given entryPoint
-       *
-       * @param  {String} entryPoint entry point for the hooks to remove
-       */
       DOMPurify.removeHooks = function (entryPoint) {
-        if (hooks[entryPoint]) {
-          hooks[entryPoint] = [];
-        }
+        hooks[entryPoint] = [];
       };
-
-      /**
-       * RemoveAllHooks
-       * Public method to remove all DOMPurify hooks
-       */
       DOMPurify.removeAllHooks = function () {
-        hooks = {};
+        hooks = _createHooksMap();
       };
       return DOMPurify;
     }
@@ -16867,7 +16691,7 @@
     const decodeUri = encodedUri => {
       try {
         return decodeURIComponent(encodedUri);
-      } catch (ex) {
+      } catch (_a) {
         return unescape(encodedUri);
       }
     };
@@ -17182,11 +17006,11 @@
       }
       if (validate && rule && !isInternalElement) {
         each$e((_c = rule.attributesForced) !== null && _c !== void 0 ? _c : [], attr => {
-          set$3(element, attr.name, attr.value === '{$uid}' ? `mce_${ uid++ }` : attr.value);
+          set$4(element, attr.name, attr.value === '{$uid}' ? `mce_${ uid++ }` : attr.value);
         });
         each$e((_d = rule.attributesDefault) !== null && _d !== void 0 ? _d : [], attr => {
           if (!has$1(element, attr.name)) {
-            set$3(element, attr.name, attr.value === '{$uid}' ? `mce_${ uid++ }` : attr.value);
+            set$4(element, attr.name, attr.value === '{$uid}' ? `mce_${ uid++ }` : attr.value);
           }
         });
         if (rule.attributesRequired && !exists(rule.attributesRequired, attr => has$1(element, attr))) {
@@ -17300,14 +17124,24 @@
         USE_PROFILES: { mathMl: true }
       };
       const purify$1 = purify();
+      const allowedEncodings = settings.allow_mathml_annotation_encodings;
+      const hasAllowedEncodings = isArray$1(allowedEncodings) && allowedEncodings.length > 0;
+      const hasValidEncoding = el => {
+        const encoding = el.getAttribute('encoding');
+        return hasAllowedEncodings && isString(encoding) && contains$2(allowedEncodings, encoding);
+      };
       purify$1.addHook('uponSanitizeElement', (node, evt) => {
         var _a;
         const lcTagName = (_a = evt.tagName) !== null && _a !== void 0 ? _a : node.nodeName.toLowerCase();
-        const allowedEncodings = settings.allow_mathml_annotation_encodings;
-        if (lcTagName === 'annotation' && isArray$1(allowedEncodings) && allowedEncodings.length > 0) {
-          const encoding = node.getAttribute('encoding');
-          if (isString(encoding) && contains$2(allowedEncodings, encoding)) {
-            evt.allowedTags[lcTagName] = true;
+        if (hasAllowedEncodings && lcTagName === 'semantics') {
+          evt.allowedTags[lcTagName] = true;
+        }
+        if (lcTagName === 'annotation') {
+          const elm = node;
+          const keepElement = hasValidEncoding(elm);
+          evt.allowedTags[lcTagName] = keepElement;
+          if (!keepElement) {
+            elm.remove();
           }
         }
       });
@@ -18823,7 +18657,7 @@
         const tryCompareBoundaryPoints = (how, sourceRange, destinationRange) => {
           try {
             return sourceRange.compareBoundaryPoints(how, destinationRange);
-          } catch (ex) {
+          } catch (_a) {
             return -1;
           }
         };
@@ -18844,7 +18678,7 @@
             }
             rng = processRanges(editor, [rng])[0];
           }
-        } catch (ex) {
+        } catch (_a) {
         }
         if (!rng) {
           rng = doc.createRange();
@@ -18879,7 +18713,7 @@
           try {
             sel.removeAllRanges();
             sel.addRange(rng);
-          } catch (ex) {
+          } catch (_a) {
           }
           if (forward === false && sel.extend) {
             sel.collapse(rng.endContainer, rng.endOffset);
@@ -18925,7 +18759,7 @@
           anchorRange.collapse(true);
           focusRange.setStart(focusNode, sel.focusOffset);
           focusRange.collapse(true);
-        } catch (e) {
+        } catch (_a) {
           return true;
         }
         return anchorRange.compareBoundaryPoints(anchorRange.START_TO_START, focusRange) <= 0;
@@ -19836,6 +19670,147 @@
       }
     };
 
+    const removeFakeSelection = editor => {
+      Optional.from(editor.selection.getNode()).each(elm => {
+        elm.removeAttribute('data-mce-selected');
+      });
+    };
+    const setEditorCommandState = (editor, cmd, state) => {
+      try {
+        editor.getDoc().execCommand(cmd, false, String(state));
+      } catch (_a) {
+      }
+    };
+    const setCommonEditorCommands = (editor, state) => {
+      setEditorCommandState(editor, 'StyleWithCSS', state);
+      setEditorCommandState(editor, 'enableInlineTableEditing', state);
+      setEditorCommandState(editor, 'enableObjectResizing', state);
+    };
+    const restoreFakeSelection = editor => {
+      editor.selection.setRng(editor.selection.getRng());
+    };
+    const toggleClass = (elm, cls, state) => {
+      if (has(elm, cls) && !state) {
+        remove$6(elm, cls);
+      } else if (state) {
+        add$2(elm, cls);
+      }
+    };
+    const disableEditor = editor => {
+      const body = SugarElement.fromDom(editor.getBody());
+      toggleClass(body, 'mce-content-readonly', true);
+      editor.selection.controlSelection.hideResizeRect();
+      editor._selectionOverrides.hideFakeCaret();
+      removeFakeSelection(editor);
+    };
+    const enableEditor = editor => {
+      const body = SugarElement.fromDom(editor.getBody());
+      toggleClass(body, 'mce-content-readonly', false);
+      if (editor.hasEditableRoot()) {
+        set$3(body, true);
+      }
+      setCommonEditorCommands(editor, false);
+      if (hasEditorOrUiFocus(editor)) {
+        editor.focus();
+      }
+      restoreFakeSelection(editor);
+      editor.nodeChanged();
+    };
+
+    const isDisabled = editor => isDisabled$1(editor);
+    const internalContentEditableAttr = 'data-mce-contenteditable';
+    const switchOffContentEditableTrue = elm => {
+      each$e(descendants(elm, '*[contenteditable="true"]'), elm => {
+        set$4(elm, internalContentEditableAttr, 'true');
+        set$3(elm, false);
+      });
+    };
+    const switchOnContentEditableTrue = elm => {
+      each$e(descendants(elm, `*[${ internalContentEditableAttr }="true"]`), elm => {
+        remove$9(elm, internalContentEditableAttr);
+        set$3(elm, true);
+      });
+    };
+    const toggleDisabled = (editor, state) => {
+      const body = SugarElement.fromDom(editor.getBody());
+      if (state) {
+        disableEditor(editor);
+        set$3(body, false);
+        switchOffContentEditableTrue(body);
+      } else {
+        switchOnContentEditableTrue(body);
+        enableEditor(editor);
+      }
+    };
+    const registerDisabledContentFilters = editor => {
+      if (editor.serializer) {
+        registerFilters(editor);
+      } else {
+        editor.on('PreInit', () => {
+          registerFilters(editor);
+        });
+      }
+    };
+    const registerFilters = editor => {
+      editor.parser.addAttributeFilter('contenteditable', nodes => {
+        if (isDisabled(editor)) {
+          each$e(nodes, node => {
+            node.attr(internalContentEditableAttr, node.attr('contenteditable'));
+            node.attr('contenteditable', 'false');
+          });
+        }
+      });
+      editor.serializer.addAttributeFilter(internalContentEditableAttr, nodes => {
+        if (isDisabled(editor)) {
+          each$e(nodes, node => {
+            node.attr('contenteditable', node.attr(internalContentEditableAttr));
+          });
+        }
+      });
+      editor.serializer.addTempAttr(internalContentEditableAttr);
+    };
+    const isClickEvent = e => e.type === 'click';
+    const allowedEvents = ['copy'];
+    const isAllowedEventInDisabledMode = e => contains$2(allowedEvents, e.type);
+    const getAnchorHrefOpt = (editor, elm) => {
+      const isRoot = elm => eq(elm, SugarElement.fromDom(editor.getBody()));
+      return closest$3(elm, 'a', isRoot).bind(a => getOpt(a, 'href'));
+    };
+    const processDisabledEvents = (editor, e) => {
+      if (isClickEvent(e) && !VK.metaKeyPressed(e)) {
+        const elm = SugarElement.fromDom(e.target);
+        getAnchorHrefOpt(editor, elm).each(href => {
+          e.preventDefault();
+          if (/^#/.test(href)) {
+            const targetEl = editor.dom.select(`${ href },[name="${ removeLeading(href, '#') }"]`);
+            if (targetEl.length) {
+              editor.selection.scrollIntoView(targetEl[0], true);
+            }
+          } else {
+            window.open(href, '_blank', 'rel=noopener noreferrer,menubar=yes,toolbar=yes,location=yes,status=yes,resizable=yes,scrollbars=yes');
+          }
+        });
+      } else if (isAllowedEventInDisabledMode(e)) {
+        editor.dispatch(e.type, e);
+      }
+    };
+    const registerDisabledModeEventHandlers = editor => {
+      editor.on('ShowCaret ObjectSelected', e => {
+        if (isDisabled(editor)) {
+          e.preventDefault();
+        }
+      });
+      editor.on('DisabledStateChange', e => {
+        if (!e.isDefaultPrevented()) {
+          toggleDisabled(editor, e.state);
+        }
+      });
+    };
+    const registerEventsAndFilters$1 = editor => {
+      registerDisabledContentFilters(editor);
+      registerDisabledModeEventHandlers(editor);
+    };
+
     const isContentCssSkinName = url => /^[a-z0-9\-]+$/i.test(url);
     const toContentSkinResourceName = url => 'content/' + url + '/content.css';
     const isBundledCssSkinName = url => tinymce.Resource.has(toContentSkinResourceName(url));
@@ -20432,6 +20407,11 @@
             preview: 'font-family font-size'
           },
           {
+            selector: '.mce-placeholder',
+            styles: { float: 'left' },
+            ceFalseOverride: true
+          },
+          {
             selector: 'table',
             collapsed: false,
             styles: {
@@ -20472,6 +20452,15 @@
               marginRight: 'auto'
             },
             preview: false
+          },
+          {
+            selector: '.mce-placeholder',
+            styles: {
+              display: 'block',
+              marginLeft: 'auto',
+              marginRight: 'auto'
+            },
+            ceFalseOverride: true
           },
           {
             selector: 'table',
@@ -20521,6 +20510,11 @@
             collapsed: false,
             styles: { float: 'right' },
             preview: 'font-family font-size'
+          },
+          {
+            selector: '.mce-placeholder',
+            styles: { float: 'right' },
+            ceFalseOverride: true
           },
           {
             selector: 'table',
@@ -20680,6 +20674,7 @@
         subscript: { inline: 'sub' },
         superscript: { inline: 'sup' },
         code: { inline: 'code' },
+        samp: { inline: 'samp' },
         link: {
           inline: 'a',
           selector: 'a',
@@ -20739,7 +20734,7 @@
           }
         ]
       };
-      Tools.each('p h1 h2 h3 h4 h5 h6 div address pre dt dd samp'.split(/\s/), name => {
+      Tools.each('p h1 h2 h3 h4 h5 h6 div address pre dt dd'.split(/\s/), name => {
         formats[name] = {
           block: name,
           remove: 'all'
@@ -21595,7 +21590,7 @@
       if (!isText$b(range.commonAncestorContainer)) {
         return Optional.none();
       }
-      const direction = forward ? HDirection.Forwards : HDirection.Backwards;
+      const direction = forward ? 1 : -1;
       const caretWalker = CaretWalker(editor.getBody());
       const getNextPosFn = curry(getVisualCaretPosition, forward ? caretWalker.next : caretWalker.prev);
       const isBeforeFn = forward ? isBeforeBoundary : isAfterBoundary;
@@ -22085,10 +22080,10 @@
       BreakType[BreakType['Wrap'] = 2] = 'Wrap';
       BreakType[BreakType['Eol'] = 3] = 'Eol';
     }(BreakType || (BreakType = {})));
-    const flip = (direction, positions) => direction === HDirection.Backwards ? reverse(positions) : positions;
-    const walk$1 = (direction, caretWalker, pos) => direction === HDirection.Forwards ? caretWalker.next(pos) : caretWalker.prev(pos);
+    const flip = (direction, positions) => direction === -1 ? reverse(positions) : positions;
+    const walk$1 = (direction, caretWalker, pos) => direction === 1 ? caretWalker.next(pos) : caretWalker.prev(pos);
     const getBreakType = (scope, direction, currentPos, nextPos) => {
-      if (isBr$6(nextPos.getNode(direction === HDirection.Forwards))) {
+      if (isBr$6(nextPos.getNode(direction === 1))) {
         return BreakType.Br;
       } else if (isInSameBlock(currentPos, nextPos) === false) {
         return BreakType.Block;
@@ -22106,7 +22101,7 @@
           break;
         }
         if (isBr$6(nextPos.getNode(false))) {
-          if (direction === HDirection.Forwards) {
+          if (direction === 1) {
             return {
               positions: flip(direction, positions).concat([nextPos]),
               breakType: BreakType.Br,
@@ -22143,7 +22138,7 @@
     };
     const getAdjacentLinePositions = (direction, getPositionsUntilBreak, scope, start) => getPositionsUntilBreak(scope, start).breakAt.map(pos => {
       const positions = getPositionsUntilBreak(scope, pos).positions;
-      return direction === HDirection.Backwards ? positions.concat(pos) : [pos].concat(positions);
+      return direction === -1 ? positions.concat(pos) : [pos].concat(positions);
     }).getOr([]);
     const findClosestHorizontalPositionFromPoint = (positions, x) => foldl(positions, (acc, newPos) => acc.fold(() => Optional.some(newPos), lastPos => lift2(head(lastPos.getClientRects()), head(newPos.getClientRects()), (lastRect, newRect) => {
       const lastDist = Math.abs(x - lastRect.left);
@@ -22217,7 +22212,7 @@
       const result = [];
       const add = node => {
         let clientRects = getClientRects([node]);
-        if (direction === -1) {
+        if (direction === VDirection.Up) {
           clientRects = clientRects.reverse();
         }
         for (let i = 0; i < clientRects.length; i++) {
@@ -22262,7 +22257,7 @@
       let caretPosition;
       const result = [];
       let line = 0;
-      if (direction === 1) {
+      if (direction === VDirection.Down) {
         walkFn = caretWalker.next;
         isBelowFn = isBelow$1;
         isAboveFn = isAbove$1;
@@ -22304,17 +22299,17 @@
     };
     const renderRangeCaretOpt = (editor, range, scrollIntoView) => Optional.some(renderRangeCaret(editor, range, scrollIntoView));
     const moveHorizontally = (editor, direction, range, isBefore, isAfter, isElement) => {
-      const forwards = direction === HDirection.Forwards;
+      const forwards = direction === 1;
       const caretWalker = CaretWalker(editor.getBody());
       const getNextPosFn = curry(getVisualCaretPosition, forwards ? caretWalker.next : caretWalker.prev);
       const isBeforeFn = forwards ? isBefore : isAfter;
       if (!range.collapsed) {
         const node = getSelectedNode(range);
         if (isElement(node)) {
-          return showCaret(direction, editor, node, direction === HDirection.Backwards, false);
+          return showCaret(direction, editor, node, direction === -1, false);
         } else if (isCefAtEdgeSelected(editor)) {
           const newRange = range.cloneRange();
-          newRange.collapse(direction === HDirection.Backwards);
+          newRange.collapse(direction === -1);
           return Optional.from(newRange);
         }
       }
@@ -22680,7 +22675,7 @@
     };
     const deleteCaret = (editor, forward) => {
       const isNearMedia = forward ? isBeforeMedia : isAfterMedia;
-      const direction = forward ? HDirection.Forwards : HDirection.Backwards;
+      const direction = forward ? 1 : -1;
       const fromPos = getNormalizedRangeEndPoint(direction, editor.getBody(), editor.selection.getRng());
       if (isNearMedia(fromPos)) {
         return deleteElement(editor, forward, fromPos.getNode(!forward));
@@ -23106,7 +23101,7 @@
       }
     };
     const getHorizontalRange = (editor, forward) => {
-      const direction = forward ? HDirection.Forwards : HDirection.Backwards;
+      const direction = forward ? 1 : -1;
       const range = editor.selection.getRng();
       return moveToCeFalseHorizontally(direction, editor, range).orThunk(() => {
         exitPreBlock(editor, direction, range);
@@ -23233,7 +23228,7 @@
     const executeWithDelayedAction = (patterns, evt) => findMap(matchDelayed(patterns, evt), pattern => pattern.action());
 
     const moveH$1 = (editor, forward) => {
-      const direction = forward ? HDirection.Forwards : HDirection.Backwards;
+      const direction = forward ? 1 : -1;
       const range = editor.selection.getRng();
       return moveHorizontally(editor, direction, range, isBeforeMedia, isAfterMedia, isMedia$2).exists(newRange => {
         moveToRange(editor, newRange);
@@ -23469,15 +23464,18 @@
           return getCellFirstCursorPosition(cell);
         });
       }, current => {
-        if (editor.mode.isReadOnly()) {
+        if (editor.mode.isReadOnly() || !isCellInEditableTable(current)) {
           return Optional.none();
         }
         editor.execCommand('mceTableInsertRowAfter');
         return tabForward(editor, isRoot, current);
       });
     };
-    const tabForward = (editor, isRoot, cell) => tabGo(editor, isRoot, next(cell, isEditable$2));
-    const tabBackward = (editor, isRoot, cell) => tabGo(editor, isRoot, prev(cell, isEditable$2));
+    const isCellInEditableTable = cell => closest$4(cell, isTag('table')).exists(isEditable$2);
+    const tabForward = (editor, isRoot, cell) => tabGo(editor, isRoot, next(cell, isCellEditable));
+    const tabBackward = (editor, isRoot, cell) => tabGo(editor, isRoot, prev(cell, isCellEditable));
+    const isCellEditable = cell => isEditable$2(cell) || descendant(cell, isEditableHTMLElement);
+    const isEditableHTMLElement = node => isHTMLElement$1(node) && isEditable$2(node);
     const handleTab = (editor, forward) => {
       const rootElements = [
         'table',
@@ -24076,6 +24074,29 @@
         toString
       };
     };
+    const oneOf = (props, rawF) => {
+      const f = rawF !== undefined ? rawF : identity;
+      const extract = (path, val) => {
+        const errors = [];
+        for (const prop of props) {
+          const res = prop.extract(path, val);
+          if (res.stype === SimpleResultType.Value) {
+            return {
+              stype: SimpleResultType.Value,
+              svalue: f(res.svalue)
+            };
+          }
+          errors.push(res);
+        }
+        return ResultCombine.consolidateArr(errors);
+      };
+      const toString = () => 'oneOf(' + map$3(props, prop => prop.toString()).join(', ') + ')';
+      return {
+        extract,
+        toString
+      };
+    };
+    const arrOfObj = compose(arrOf, objOf);
 
     const valueOf = validator => value(v => validator(v).fold(SimpleResult.serror, SimpleResult.svalue));
     const extractValue = (label, prop, obj) => {
@@ -24106,6 +24127,7 @@
     const validateEnum = values => valueOf(value => contains$2(values, value) ? Result.value(value) : Result.error(`Unsupported value: "${ value }", choose one of "${ values.join(', ') }".`));
     const requiredOf = (key, schema) => field(key, key, required(), schema);
     const requiredString = key => requiredOf(key, string);
+    const requiredStringEnum = (key, values) => field(key, key, required(), validateEnum(values));
     const requiredFunction = key => requiredOf(key, functionProcessor);
     const requiredArrayOf = (key, schema) => field(key, key, required(), arrOf(schema));
     const optionOf = (key, schema) => field(key, key, asOption(), schema);
@@ -24173,12 +24195,14 @@
 
     const contextButtonFields = baseToolbarButtonFields.concat([
       defaultedType('contextformbutton'),
+      defaultedString('align', 'end'),
       primary,
       onAction,
       customField('original', identity)
     ]);
     const contextToggleButtonFields = baseToolbarToggleButtonFields.concat([
       defaultedType('contextformbutton'),
+      defaultedString('align', 'end'),
       primary,
       onAction,
       customField('original', identity)
@@ -24189,15 +24213,56 @@
       contextformbutton: contextButtonFields,
       contextformtogglebutton: contextToggleButtonFields
     });
-    objOf([
-      defaultedType('contextform'),
-      defaultedFunction('initValue', constant('')),
+    const baseContextFormFields = [
       optionalLabel,
       requiredArrayOf('commands', toggleOrNormal),
       optionOf('launch', choose('type', {
         contextformbutton: launchButtonFields,
         contextformtogglebutton: launchToggleButtonFields
+      })),
+      defaultedFunction('onInput', noop),
+      defaultedFunction('onSetup', noop)
+    ];
+    const contextFormFields = [
+      ...contextBarFields,
+      ...baseContextFormFields,
+      requiredStringEnum('type', ['contextform']),
+      defaultedFunction('initValue', constant('')),
+      optionString('placeholder')
+    ];
+    const contextSliderFormFields = [
+      ...contextBarFields,
+      ...baseContextFormFields,
+      requiredStringEnum('type', ['contextsliderform']),
+      defaultedFunction('initValue', constant(0)),
+      defaultedFunction('min', constant(0)),
+      defaultedFunction('max', constant(100))
+    ];
+    const contextSizeInputFormFields = [
+      ...contextBarFields,
+      ...baseContextFormFields,
+      requiredStringEnum('type', ['contextsizeinputform']),
+      defaultedFunction('initValue', constant({
+        width: '',
+        height: ''
       }))
+    ];
+    choose('type', {
+      contextform: contextFormFields,
+      contextsliderform: contextSliderFormFields,
+      contextsizeinputform: contextSizeInputFormFields
+    });
+
+    objOf([
+      defaultedType('contexttoolbar'),
+      requiredOf('items', oneOf([
+        string,
+        arrOfObj([
+          optionString('name'),
+          optionString('label'),
+          requiredArrayOf('items', string)
+        ])
+      ]))
     ].concat(contextBarFields));
 
     const register$2 = editor => {
@@ -25742,9 +25807,16 @@
       });
     };
 
+    const isValidContainer = (root, container) => root === container || root.contains(container);
+    const isInEditableRange = (editor, range) => {
+      if (!isValidContainer(editor.getBody(), range.startContainer) || !isValidContainer(editor.getBody(), range.endContainer)) {
+        return true;
+      }
+      return isEditableRange(editor.dom, range);
+    };
     const setup$e = editor => {
       editor.on('beforeinput', e => {
-        if (!editor.selection.isEditable() || exists(e.getTargetRanges(), rng => !isEditableRange(editor.dom, rng))) {
+        if (!editor.selection.isEditable() || exists(e.getTargetRanges(), rng => !isInEditableRange(editor, rng))) {
           e.preventDefault();
         }
       });
@@ -25930,7 +26002,7 @@
         const editor = this.editor;
         const selection = editor.selection;
         let node;
-        if (editor.initialized && selection && !shouldDisableNodeChange(editor)) {
+        if (editor.initialized && selection && !shouldDisableNodeChange(editor) && !isDisabled$1(editor)) {
           const root = editor.getBody();
           node = selection.getStart(true) || root;
           if (node.ownerDocument !== editor.getDoc() || !editor.dom.isChildOf(node, root)) {
@@ -26487,7 +26559,7 @@
           const contentType = dataTransfer.types[i];
           try {
             items[contentType] = dataTransfer.getData(contentType);
-          } catch (ex) {
+          } catch (_a) {
             items[contentType] = '';
           }
         }
@@ -26680,7 +26752,7 @@
           clipboardData.setData('text/plain', text);
           clipboardData.setData(internalHtmlMime(), html);
           return true;
-        } catch (e) {
+        } catch (_a) {
           return false;
         }
       } else {
@@ -27219,6 +27291,8 @@
         clientX: 0,
         clientY: 0,
         ctrlKey: false,
+        layerX: 0,
+        layerY: 0,
         metaKey: false,
         movementX: 0,
         movementY: 0,
@@ -27761,7 +27835,7 @@
         const doc = editor.getDoc();
         const realSelectionContainer = descendant$1(body, '#' + realSelectionId).getOrThunk(() => {
           const newContainer = SugarElement.fromHtml('<div data-mce-bogus="all" class="mce-offscreen-selection"></div>', doc);
-          set$3(newContainer, 'id', realSelectionId);
+          set$4(newContainer, 'id', realSelectionId);
           append$1(body, newContainer);
           return newContainer;
         });
@@ -28469,7 +28543,7 @@
       const setEditorCommandState = (cmd, state) => {
         try {
           editor.getDoc().execCommand(cmd, false, String(state));
-        } catch (ex) {
+        } catch (_a) {
         }
       };
       const isDefaultPrevented = e => {
@@ -28864,7 +28938,7 @@
       const body = SugarElement.fromDom(editor.getBody());
       const container = getStyleContainer(getRootNode(body));
       const style = SugarElement.fromTag('style');
-      set$3(style, 'type', 'text/css');
+      set$4(style, 'type', 'text/css');
       append$1(style, SugarElement.fromText(text));
       append$1(container, style);
       editor.on('remove', () => {
@@ -29038,6 +29112,9 @@
         initInstanceCallback.call(editor, editor);
       }
       autoFocus(editor);
+      if (isDisabled(editor)) {
+        toggleDisabled(editor, true);
+      }
     };
     const getStyleSheetLoader$1 = editor => editor.inline ? editor.ui.styleSheetLoader : editor.dom.styleSheetLoader;
     const makeStylesheetLoadingPromises = (editor, css, framedFonts) => {
@@ -29165,7 +29242,7 @@
       body.disabled = true;
       editor.readonly = isReadOnly$1(editor);
       editor._editableRoot = hasEditableRoot$1(editor);
-      if (editor.hasEditableRoot()) {
+      if (!isDisabled$1(editor) && editor.hasEditableRoot()) {
         if (editor.inline && DOM$6.getStyle(body, 'position', true) === 'static') {
           body.style.position = 'relative';
         }
@@ -29242,7 +29319,7 @@
     const DOM$5 = DOMUtils.DOM;
     const createIframeElement = (id, title, customAttrs, tabindex) => {
       const iframe = SugarElement.fromTag('iframe');
-      tabindex.each(t => set$3(iframe, 'tabindex', t));
+      tabindex.each(t => set$4(iframe, 'tabindex', t));
       setAll$1(iframe, customAttrs);
       setAll$1(iframe, {
         id: id + '_ifr',
@@ -29424,7 +29501,7 @@
         hide: Optional.from(api.hide).getOr(noop),
         isEnabled: Optional.from(api.isEnabled).getOr(always),
         setEnabled: state => {
-          const shouldSkip = state && editor.mode.get() === 'readonly';
+          const shouldSkip = state && (editor.mode.get() === 'readonly' || isDisabled(editor));
           if (!shouldSkip) {
             Optional.from(api.setEnabled).each(f => f(state));
           }
@@ -29638,8 +29715,10 @@
     const setEditableRoot = (editor, state) => {
       if (editor._editableRoot !== state) {
         editor._editableRoot = state;
-        editor.getBody().contentEditable = String(editor.hasEditableRoot());
-        editor.nodeChanged();
+        if (!isDisabled(editor)) {
+          editor.getBody().contentEditable = String(editor.hasEditableRoot());
+          editor.nodeChanged();
+        }
         fireEditableRootStateChange(editor, state);
       }
     };
@@ -29789,7 +29868,7 @@
           let failed;
           try {
             doc.execCommand(command);
-          } catch (ex) {
+          } catch (_a) {
             failed = true;
           }
           if (command === 'paste' && !doc.queryCommandEnabled(command)) {
@@ -30327,120 +30406,6 @@
       }
     }
 
-    const toggleClass = (elm, cls, state) => {
-      if (has(elm, cls) && !state) {
-        remove$6(elm, cls);
-      } else if (state) {
-        add$2(elm, cls);
-      }
-    };
-    const setEditorCommandState = (editor, cmd, state) => {
-      try {
-        editor.getDoc().execCommand(cmd, false, String(state));
-      } catch (ex) {
-      }
-    };
-    const setContentEditable = (elm, state) => {
-      elm.dom.contentEditable = state ? 'true' : 'false';
-    };
-    const removeFakeSelection = editor => {
-      Optional.from(editor.selection.getNode()).each(elm => {
-        elm.removeAttribute('data-mce-selected');
-      });
-    };
-    const restoreFakeSelection = editor => {
-      editor.selection.setRng(editor.selection.getRng());
-    };
-    const setCommonEditorCommands = (editor, state) => {
-      setEditorCommandState(editor, 'StyleWithCSS', state);
-      setEditorCommandState(editor, 'enableInlineTableEditing', state);
-      setEditorCommandState(editor, 'enableObjectResizing', state);
-    };
-    const setEditorReadonly = editor => {
-      editor.readonly = true;
-      editor.selection.controlSelection.hideResizeRect();
-      editor._selectionOverrides.hideFakeCaret();
-      removeFakeSelection(editor);
-    };
-    const unsetEditorReadonly = (editor, body) => {
-      editor.readonly = false;
-      if (editor.hasEditableRoot()) {
-        setContentEditable(body, true);
-      }
-      setCommonEditorCommands(editor, false);
-      if (hasEditorOrUiFocus(editor)) {
-        editor.focus();
-      }
-      restoreFakeSelection(editor);
-      editor.nodeChanged();
-    };
-    const toggleReadOnly = (editor, state) => {
-      const body = SugarElement.fromDom(editor.getBody());
-      toggleClass(body, 'mce-content-readonly', state);
-      if (state) {
-        setEditorReadonly(editor);
-        if (editor.hasEditableRoot()) {
-          setContentEditable(body, true);
-        }
-      } else {
-        unsetEditorReadonly(editor, body);
-      }
-    };
-    const isReadOnly = editor => editor.readonly;
-    const isClickEvent = e => e.type === 'click';
-    const allowedEvents = ['copy'];
-    const isReadOnlyAllowedEvent = e => contains$2(allowedEvents, e.type);
-    const getAnchorHrefOpt = (editor, elm) => {
-      const isRoot = elm => eq(elm, SugarElement.fromDom(editor.getBody()));
-      return closest$3(elm, 'a', isRoot).bind(a => getOpt(a, 'href'));
-    };
-    const processReadonlyEvents = (editor, e) => {
-      if (isClickEvent(e) && !VK.metaKeyPressed(e)) {
-        const elm = SugarElement.fromDom(e.target);
-        getAnchorHrefOpt(editor, elm).each(href => {
-          e.preventDefault();
-          if (/^#/.test(href)) {
-            const targetEl = editor.dom.select(`${ href },[name="${ removeLeading(href, '#') }"]`);
-            if (targetEl.length) {
-              editor.selection.scrollIntoView(targetEl[0], true);
-            }
-          } else {
-            window.open(href, '_blank', 'rel=noopener noreferrer,menubar=yes,toolbar=yes,location=yes,status=yes,resizable=yes,scrollbars=yes');
-          }
-        });
-      } else if (isReadOnlyAllowedEvent(e)) {
-        editor.dispatch(e.type, e);
-      }
-    };
-    const registerReadOnlySelectionBlockers = editor => {
-      editor.on('beforeinput paste cut dragend dragover draggesture dragdrop drop drag', e => {
-        if (isReadOnly(editor)) {
-          e.preventDefault();
-        }
-      });
-      editor.on('BeforeExecCommand', e => {
-        if ((e.command === 'Undo' || e.command === 'Redo') && isReadOnly(editor)) {
-          e.preventDefault();
-        }
-      });
-      editor.on('input', e => {
-        if (!e.isComposing && isReadOnly(editor)) {
-          const undoLevel = editor.undoManager.add();
-          if (isNonNullable(undoLevel)) {
-            editor.undoManager.undo();
-          }
-        }
-      });
-      editor.on('compositionend', () => {
-        if (isReadOnly(editor)) {
-          const undoLevel = editor.undoManager.add();
-          if (isNonNullable(undoLevel)) {
-            editor.undoManager.undo();
-          }
-        }
-      });
-    };
-
     const nativeEvents = Tools.makeMap('focus blur focusin focusout click dblclick mousedown mouseup mousemove mouseover beforepaste paste cut copy selectionchange ' + 'mouseout mouseenter mouseleave wheel keydown keypress keyup input beforeinput contextmenu dragstart dragend dragover ' + 'draggesture dragdrop drop drag submit ' + 'compositionstart compositionend compositionupdate touchstart touchmove touchend touchcancel', ' ');
     class EventDispatcher {
       static isNative(name) {
@@ -30632,12 +30597,12 @@
       }
       return editor.getBody();
     };
-    const isListening = editor => !editor.hidden;
+    const isListening = editor => !editor.hidden && !isDisabled(editor);
     const fireEvent = (editor, eventName, e) => {
       if (isListening(editor)) {
         editor.dispatch(eventName, e);
-      } else if (isReadOnly(editor)) {
-        processReadonlyEvents(editor, e);
+      } else if (isDisabled(editor)) {
+        processDisabledEvents(editor, e);
       }
     };
     const bindEventDelegate = (editor, eventName) => {
@@ -30886,6 +30851,52 @@
       };
     };
 
+    const setContentEditable = (elm, state) => {
+      elm.dom.contentEditable = state ? 'true' : 'false';
+    };
+    const toggleReadOnly = (editor, state) => {
+      const body = SugarElement.fromDom(editor.getBody());
+      if (state) {
+        editor.readonly = true;
+        if (editor.hasEditableRoot()) {
+          setContentEditable(body, true);
+        }
+        disableEditor(editor);
+      } else {
+        editor.readonly = false;
+        enableEditor(editor);
+      }
+    };
+    const isReadOnly = editor => editor.readonly;
+    const registerReadOnlyInputBlockers = editor => {
+      editor.on('beforeinput paste cut dragend dragover draggesture dragdrop drop drag', e => {
+        if (isReadOnly(editor)) {
+          e.preventDefault();
+        }
+      });
+      editor.on('BeforeExecCommand', e => {
+        if ((e.command === 'Undo' || e.command === 'Redo') && isReadOnly(editor)) {
+          e.preventDefault();
+        }
+      });
+      editor.on('input', e => {
+        if (!e.isComposing && isReadOnly(editor)) {
+          const undoLevel = editor.undoManager.add();
+          if (isNonNullable(undoLevel)) {
+            editor.undoManager.undo();
+          }
+        }
+      });
+      editor.on('compositionend', () => {
+        if (isReadOnly(editor)) {
+          const undoLevel = editor.undoManager.add();
+          if (isNonNullable(undoLevel)) {
+            editor.undoManager.undo();
+          }
+        }
+      });
+    };
+
     const defaultModes = [
       'design',
       'readonly'
@@ -30907,7 +30918,7 @@
       fireSwitchMode(editor, mode);
     };
     const setMode = (editor, availableModes, activeMode, mode) => {
-      if (mode === activeMode.get()) {
+      if (mode === activeMode.get() || editor.initialized && isDisabled(editor)) {
         return;
       } else if (!has$2(availableModes, mode)) {
         throw new Error(`Editor mode '${ mode }' is invalid`);
@@ -30951,7 +30962,8 @@
           editorReadOnly: true
         }
       });
-      registerReadOnlySelectionBlockers(editor);
+      registerReadOnlyInputBlockers(editor);
+      registerEventsAndFilters$1(editor);
       return {
         isReadOnly: () => isReadOnly(editor),
         set: mode => setMode(editor, availableModes.get(), activeMode, mode),
@@ -31135,6 +31147,12 @@
           type
         };
       };
+      const addDefaulted = (collection, type) => (name, spec) => {
+        collection[name.toLowerCase()] = {
+          type,
+          ...spec
+        };
+      };
       const addIcon = (name, svgData) => icons[name.toLowerCase()] = svgData;
       const addContext = (name, pred) => contexts[name.toLowerCase()] = pred;
       return {
@@ -31149,7 +31167,7 @@
         addAutocompleter: add(popups, 'autocompleter'),
         addContextMenu: add(contextMenus, 'contextmenu'),
         addContextToolbar: add(contextToolbars, 'contexttoolbar'),
-        addContextForm: add(contextToolbars, 'contextform'),
+        addContextForm: addDefaulted(contextToolbars, 'contextform'),
         addSidebar: add(sidebars, 'sidebar'),
         addView: add(views, 'views'),
         addIcon,
@@ -31623,8 +31641,8 @@
       documentBaseURL: null,
       suffix: null,
       majorVersion: '7',
-      minorVersion: '5.1',
-      releaseDate: 'TBD',
+      minorVersion: '7.2',
+      releaseDate: '2025-03-19',
       i18n: I18n,
       activeEditor: null,
       focusedEditor: null,
@@ -32146,7 +32164,7 @@
       localStorage = window.localStorage;
       localStorage.setItem(test, test);
       localStorage.removeItem(test);
-    } catch (e) {
+    } catch (_a) {
       localStorage = create();
     }
     var LocalStorage = localStorage;
@@ -32229,7 +32247,7 @@
       if (typeof module === 'object') {
         try {
           module.exports = tinymce;
-        } catch (_) {
+        } catch (_a) {
         }
       }
     };

@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -50,64 +50,19 @@ use App\Services\DTKSRegsosEk2022k;
 use Illuminate\Support\Facades\DB;
 
 // TODO : jika ada perubahan versi DTKS terbaru, selain merubah data yg ada
-// silahkan buat kode untuk menghapus file pdf versi DTKS sebelumnya.
+// silakan buat kode untuk menghapus file pdf versi DTKS sebelumnya.
 // cek kode DTKSRegsosEk2022k::generateCetakPdf()
 
 class Dtks extends Admin_Controller
 {
-    public $modul_ini     = 'satu-data';
-    public $sub_modul_ini = 'dtks';
+    public $modul_ini           = 'satu-data';
+    public $sub_modul_ini       = 'dtks';
+    public $kategori_pengaturan = 'DTKS';
 
     public function __construct()
     {
         parent::__construct();
         isCan('b');
-    }
-
-    /**
-     * proses singkronisasi jumlah anggota dtks dengan anggota keluarga yg berubah
-     *
-     * @param mixed $rtm
-     */
-    protected function syncDtksRtm($rtm)
-    {
-        $semua_anggota = Penduduk::without([
-            'jenisKelamin',
-            'agama',
-            'pendidikan',
-            'pendidikanKK',
-            'pekerjaan',
-            'wargaNegara',
-            'golonganDarah',
-            'cacat',
-            'statusKawin',
-            'pendudukStatus',
-            'wilayah',
-        ])
-            ->select('id', 'nama', 'id_rtm', 'rtm_level', 'id_kk', 'kk_level')
-            ->whereIn('id_rtm', $rtm->pluck('no_kk'))
-            ->get();
-        $semua_dtks = ModelDtks::select('id', 'id_rtm', 'id_keluarga', 'versi_kuisioner')
-            ->withCount('dtksAnggota')
-            ->whereIn('id_rtm', $rtm->pluck('id'))
-            ->get();
-
-        foreach ($rtm as $item) {
-            $dtks_rtm = $semua_dtks->where('id_rtm', $item->id);
-
-            if ($dtks_rtm->count() != 0) {
-                $jumlah_dtks_anggota = $dtks_rtm->reduce(static fn ($carry, $item) => $carry + $item->dtks_anggota_count);
-                $jumlah_anggota_rt   = $semua_anggota->where('id_rtm', $item->no_kk)->count();
-
-                if ($jumlah_anggota_rt != $jumlah_dtks_anggota) {
-                    foreach ($dtks_rtm as $dtks) {
-                        if ($dtks->versi_kuisioner == DtksEnum::REGSOS_EK2022_K) {
-                            return (new DTKSRegsosEk2022k())->generateDefaultDtks($dtks);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public function index()
@@ -116,16 +71,8 @@ class Dtks extends Admin_Controller
             'kepalaKeluarga' => static function ($builder): void {
                 $builder->select('id', 'nama', 'nik');
                 $builder->without([
-                    'jenisKelamin',
-                    'agama',
-                    'pendidikan',
-                    'pendidikanKK',
                     'pekerjaan',
-                    'wargaNegara',
-                    'golonganDarah',
                     'cacat',
-                    'statusKawin',
-                    'pendudukStatus',
                     'wilayah',
                 ]);
             },
@@ -224,16 +171,8 @@ class Dtks extends Admin_Controller
             'penduduk' => static function ($builder): void {
                 $builder->select('id', 'nama', 'nik');
                 $builder->without([
-                    'jenisKelamin',
-                    'agama',
-                    'pendidikan',
-                    'pendidikanKK',
                     'pekerjaan',
-                    'wargaNegara',
-                    'golonganDarah',
                     'cacat',
-                    'statusKawin',
-                    'pendudukStatus',
                     'wilayah',
                 ]);
             },
@@ -390,20 +329,6 @@ class Dtks extends Admin_Controller
         }
     }
 
-    protected function synchroniseDTKSWithOpenSid(ModelDtks $dtks)
-    {
-        $config = Config::first();
-
-        if (! $config) {
-            session_error(' : Konfigurasi tidak ditemukan');
-            redirect_with('error', 'Konfigurasi tidak ditemukan', ci_route('dtks'));
-        }
-
-        if ($dtks->versi_kuisioner == DtksEnum::REGSOS_EK2022_K) {
-            $dtks = (new DTKSRegsosEk2022k())->syncronizeWithOpenSid($dtks);
-        }
-    }
-
     /**
      * savePengaturan
      *
@@ -503,5 +428,57 @@ class Dtks extends Admin_Controller
         }
 
         return json(['message' => 'Tidak melakukan apapun'], 200);
+    }
+
+    /**
+     * proses singkronisasi jumlah anggota dtks dengan anggota keluarga yg berubah
+     *
+     * @param mixed $rtm
+     */
+    protected function syncDtksRtm($rtm)
+    {
+        $semua_anggota = Penduduk::without([
+            'pekerjaan',
+            'cacat',
+            'wilayah',
+        ])
+            ->select('id', 'nama', 'id_rtm', 'rtm_level', 'id_kk', 'kk_level')
+            ->whereIn('id_rtm', $rtm->pluck('no_kk'))
+            ->get();
+        $semua_dtks = ModelDtks::select('id', 'id_rtm', 'id_keluarga', 'versi_kuisioner')
+            ->withCount('dtksAnggota')
+            ->whereIn('id_rtm', $rtm->pluck('id'))
+            ->get();
+
+        foreach ($rtm as $item) {
+            $dtks_rtm = $semua_dtks->where('id_rtm', $item->id);
+
+            if ($dtks_rtm->count() != 0) {
+                $jumlah_dtks_anggota = $dtks_rtm->reduce(static fn ($carry, $item) => $carry + $item->dtks_anggota_count);
+                $jumlah_anggota_rt   = $semua_anggota->where('id_rtm', $item->no_kk)->count();
+
+                if ($jumlah_anggota_rt != $jumlah_dtks_anggota) {
+                    foreach ($dtks_rtm as $dtks) {
+                        if ($dtks->versi_kuisioner == DtksEnum::REGSOS_EK2022_K) {
+                            return (new DTKSRegsosEk2022k())->generateDefaultDtks($dtks);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    protected function synchroniseDTKSWithOpenSid(ModelDtks $dtks)
+    {
+        $config = Config::first();
+
+        if (! $config) {
+            session_error(' : Konfigurasi tidak ditemukan');
+            redirect_with('error', 'Konfigurasi tidak ditemukan', ci_route('dtks'));
+        }
+
+        if ($dtks->versi_kuisioner == DtksEnum::REGSOS_EK2022_K) {
+            $dtks = (new DTKSRegsosEk2022k())->syncronizeWithOpenSid($dtks);
+        }
     }
 }

@@ -18,9 +18,7 @@
 
     <div class="box box-info">
         <div class="box-header with-border">
-            <a href="{{ ci_route('data_persil') }}" class="btn btn-social btn-info btn-sm btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block">
-                <i class="fa fa-arrow-circle-left "></i>Kembali ke Daftar Persil
-            </a>
+            @include('admin.layouts.components.tombol_kembali', ['url' => ci_route('data_persil'), 'label' => 'Daftar Persil'])
         </div>
         <div class="box-body">
             {!! form_open($form_action, 'class="form-horizontal" id="validasi"') !!}
@@ -87,7 +85,7 @@
                         <select class="form-control input-sm required select2" id="kelas" name="cdesa_awal" type="text" @disabled($persil) placeholder="C-Desa pemilik awal persil ini">
                             <option value="">-- Pilih C-Desa Pemilik Awal --</option>
                             @foreach ($list_cdesa as $cdesa)
-                                <option value="{{ $cdesa['id'] }}" @selected(($id_cdesa && $id_cdesa == $cdesa->id) || $cdesa->id == $persil['cdesa_awal'])>{{ $cdesa->nomor . ' - ' . $cdesa->cdesaPenduduk?->penduduk?->nama ?? $cdesa->nama_pemilik_luar }}</option>
+                                <option value="{{ $cdesa['id'] }}" @selected(($id_cdesa && $id_cdesa == $cdesa->id) || $cdesa->id == $persil['cdesa_awal'])>{{ $cdesa->nomor . ' - ' . $cdesa->nama_pemilik }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -151,6 +149,34 @@
                                     {{ $item['nama'] }}</option>
                             @endforeach
                         </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Tampilkan di Peta Website</label>
+                    <div class="btn-group col-sm-7" data-toggle="buttons">
+                        <label id="ss1" class="btn btn-info btn-sm col-xs-6 col-sm-4 col-lg-2 form-check-label @active($persil['is_publik'] == '1')">
+                            <input
+                                type="radio"
+                                name="is_publik"
+                                class="form-check-input"
+                                type="radio"
+                                value="1"
+                                @checked($persil['is_publik'] == '1')
+                                autocomplete="off"
+                            > Ya
+                        </label>
+                        <label id="ss2" class="btn btn-info btn-sm col-xs-6 col-sm-4 col-lg-2 form-check-label @active(!$persil['is_publik'])">
+                            <input
+                                type="radio"
+                                name="is_publik"
+                                class="form-check-input"
+                                type="radio"
+                                value="0"
+                                @checked(!$persil['is_publik'])
+                                autocomplete="off"
+                            > Tidak
+                        </label>
                     </div>
                 </div>
 

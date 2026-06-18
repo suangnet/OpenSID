@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -38,13 +38,18 @@
 defined('BASEPATH') || exit('No direct script access allowed');
 
 use App\Enums\FirebaseEnum;
+use App\Libraries\Database;
+use App\Libraries\Tracker;
 use App\Models\Config;
 use App\Models\FcmToken;
 use App\Models\FcmTokenMandiri;
 use App\Models\LogNotifikasiAdmin;
 use App\Models\LogNotifikasiMandiri;
+use App\Models\PendudukMandiri;
 use App\Models\User;
+use App\Repositories\SettingAplikasiRepository;
 use App\Traits\ProvidesConvenienceMethods;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property CI_Benchmark        $benchmark
@@ -68,10 +73,38 @@ class MY_Controller extends CI_Controller
     public $includes;
     public $theme;
     public $template;
+
+    /**
+     * Ambil item dari array POST.
+     *
+     * @var array
+     */
     public $request;
+
+    /**
+     * Daftar anjungan sesuai cookie atau mac addres.
+     *
+     * @var array
+     */
     public $cek_anjungan;
 
     /**
+     * Daftar setting aplikasi yang diambil dari database.
+     *
+     * @var App\Models\SettingAplikasi|Illuminate\Database\Eloquent\Collection
+     */
+    public $list_setting;
+
+    /**
+     * Daftar setting aplikasi.
+     *
+     * @var App\Models\SettingAplikasi|object
+     */
+    public $setting;
+
+    /**
+     * Nama controller yang sedang diakses.
+     *
      * @var string
      */
     public $controller;
@@ -83,11 +116,15 @@ class MY_Controller extends CI_Controller
         if ($error['code'] == 1049 && ! $this->db) {
             return;
         }
-
+        $this->load->driver('cache', ['adapter' => 'file', 'backup' => 'dummy']);
         $this->controller = strtolower($this->router->fetch_class());
         $this->request    = $this->input->post();
-        $this->cek_config();
-        $this->setConfigViews();
+
+        $this->cekConfig();
+
+        SettingAplikasiRepository::applySettingCI($this);
+        (new Database())->checkMigration();
+        (new Tracker())->trackDesa();
     }
 
     // Bersihkan session cluster wilayah
@@ -98,42 +135,6 @@ class MY_Controller extends CI_Controller
         foreach ($cluster_session as $session) {
             $this->session->unset_userdata($session);
         }
-    }
-
-    private function cek_config(): void
-    {
-        // jika belum install
-        if (! file_exists(DESAPATH)) {
-            redirect('install');
-        }
-
-        $this->load->database();
-
-        // Tambahkan model yg akan diautoload di sini. Seeder di load disini setelah
-        // installer berhasil dijalankan dengan kondisi folder desa sudah ada.
-        $this->load->model(['seeders/seeder', 'setting_model', 'anjungan_model']);
-
-        $appKey   = get_app_key();
-        $appKeyDb = Config::first();
-
-        if (Config::count() === 0) {
-            $this->session->cek_app_key = true;
-            show_error('Silahkan tambah desa baru melalui console');
-        } elseif (Config::count() > 1) {
-            $appKeyDb = Config::appKey()->first();
-        }
-
-        if (! empty($appKeyDb->app_key) && $appKey !== $appKeyDb->app_key) {
-            $this->session->cek_app_key = true;
-            redirect('koneksi_database/config');
-        }
-
-        $this->setting_model->init();
-
-        $this->cek_anjungan = $this->anjungan_model->cek_anjungan();
-
-        // Cek perangkat lupa absen keluar
-        cek_kehadiran();
     }
 
     public function create_log_notifikasi_admin($next, $isi): void
@@ -157,7 +158,10 @@ class MY_Controller extends CI_Controller
 
                 return array_merge($data_user, $isi);
             });
-            LogNotifikasiAdmin::insert($logs->toArray());
+
+            foreach ($logs as $log) {
+                LogNotifikasiAdmin::create($log);
+            }
         }
     }
 
@@ -209,6 +213,12 @@ class MY_Controller extends CI_Controller
     public function create_log_notifikasi_penduduk($isi): void
     {
         if (is_array($isi)) {
+            if (isset($isi['id_user_mandiri'])) {
+                $exists = PendudukMandiri::where('id_pend', $isi['id_user_mandiri'])->exists();
+                if (! $exists) {
+                    return;
+                }
+            }
             LogNotifikasiMandiri::create($isi);
         }
     }
@@ -246,24 +256,54 @@ class MY_Controller extends CI_Controller
         $this->create_log_notifikasi_penduduk($isi);
     }
 
-    public function setConfigViews(): void
+    private function cekConfig(): void
     {
-        $config = cache()->rememberForever('views_blade', static function (): array {
-            $moduleLocation = config_item('modules_locations');
-            $modules        = [];
+        // jika belum install
+        if (! file_exists(DESAPATH)) {
+            redirect('install');
+        }
 
-            foreach ($moduleLocation as $key => $value) {
-                $modules = array_merge($modules, array_map(static fn ($module): string => $module . '/Views/', glob($key . '*', GLOB_ONLYDIR)));
-            }
-            $themes = array_merge(
-                glob(DESAPATH . 'themes/*/', GLOB_ONLYDIR),
-                glob(VENDORPATH . 'themes/*/', GLOB_ONLYDIR)
-            );
+        $this->load->database();
 
-            return array_merge(config('view.paths') ?? [], $modules, $themes);
-        });
+        // Tambahkan model yg akan diautoload di sini. Seeder di load disini setelah
+        // installer berhasil dijalankan dengan kondisi folder desa sudah ada.
+        $this->load->model(['seeders/seeder']);
 
-        array_walk($config, static fn ($value) => app('view')->addLocation($value));
+        $appKey   = get_app_key();
+        $appKeyDb = Config::first();
+
+        if (Config::count() === 0) {
+            $this->session->cek_app_key = true;
+            show_error('Silakan tambah desa baru melalui console');
+        } elseif (Config::count() > 1) {
+            $appKeyDb = Config::appKey()->first();
+        }
+
+        if (! empty($appKeyDb->app_key) && $appKey !== $appKeyDb->app_key) {
+            $this->session->cek_app_key = true;
+            redirect('koneksi_database/config');
+        }
+
+        $this->cek_anjungan = $this->cekAnjungan();
+    }
+
+    /**
+     * Daftar anjungan sesuai cookie atau mac addres.
+     */
+    private function cekAnjungan(): array
+    {
+        $ip         = $this->input->ip_address();
+        $macAddress = $this->session->mac_address;
+
+        try {
+            return (array) DB::table('anjungan')->where(['ip_address' => $ip, 'status' => 1])
+                ->orWhere('id_pengunjung', $_COOKIE['pengunjung'])
+                ->when($macAddress, static function ($query) use ($macAddress) {
+                    $query->orWhere('mac_address', $macAddress);
+                })->orderBy('tipe')->first();
+        } catch (Exception $e) {
+            return [];
+        }
     }
 }
 
@@ -286,17 +326,6 @@ class Tte_Controller extends MY_Controller
         parent::__construct();
         if (! ci_auth()) {
             redirect('siteman');
-        }
-    }
-}
-
-class Anjungan_Controller extends Admin_Controller
-{
-    public function __construct()
-    {
-        parent::__construct();
-        if (! cek_anjungan()) {
-            redirect('anjungan');
         }
     }
 }

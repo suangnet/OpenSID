@@ -92,6 +92,13 @@ class CI_Log {
 	protected $_file_ext;
 
 	/**
+	 * Filename prefix
+	 * 
+	 * @var string
+	 */
+	protected $_file_prefix = 'log-';
+
+	/**
 	 * Whether or not the logger can write to the log files
 	 *
 	 * @var bool
@@ -103,7 +110,13 @@ class CI_Log {
 	 *
 	 * @var array
 	 */
-	protected $_levels = array('ERROR' => 1, 'DEBUG' => 2, 'INFO' => 3, 'ALL' => 4);
+	protected $_levels = [
+		'ERROR'  => 1,
+		'DEBUG'  => 2,
+		'INFO'   => 3,
+		'ALL'    => 4,
+		'NOTICE' => 5,
+	];
 
 	/**
 	 * mbstring.func_overload flag
@@ -151,6 +164,11 @@ class CI_Log {
 			$this->_date_fmt = $config['log_date_format'];
 		}
 
+		if ( ! empty($config['log_file_prefix']))
+		{
+			$this->_file_prefix = $config['log_file_prefix'];
+		}
+
 		if ( ! empty($config['log_file_permissions']) && is_int($config['log_file_permissions']))
 		{
 			$this->_file_permissions = $config['log_file_permissions'];
@@ -183,7 +201,7 @@ class CI_Log {
 			return FALSE;
 		}
 
-		$filepath = $this->_log_path.'log-'.date('Y-m-d').'.'.$this->_file_ext;
+		$filepath = $this->_log_path.$this->_file_prefix.date('Y-m-d').'.'.$this->_file_ext;
 		$message = '';
 
 		if ( ! file_exists($filepath))
@@ -252,7 +270,7 @@ class CI_Log {
 	 */
 	protected function _format_line($level, $date, $message)
 	{
-		return $level.' - '.$date.' --> '.$message.PHP_EOL;
+		return '['.$date.'] ' . ENVIRONMENT. '.' .$level.': '.$message.PHP_EOL;
 	}
 
 	// --------------------------------------------------------------------

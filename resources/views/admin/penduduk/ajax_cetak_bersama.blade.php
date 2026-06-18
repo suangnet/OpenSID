@@ -2,9 +2,16 @@
 <script>
     $(function() {
         $('input[name=judul]').val($('#judul-statistik').text());
-        // copy id_rb terpilih ke form ini
-        let _clone = $('#tabeldata').find('input[name="id_cb[]"]:checked').clone();
-        $('#checkbox_div').append(_clone)
+
+        const checkedIds = $('#tabeldata input[name="id_cb[]"]:checked').map(function() {
+            return this.value;
+        }).get();
+
+        if (checkedIds.length === 0) {
+            return;
+        }
+
+        $('#checkbox_div').append(`<input type="hidden" name="id_cb" value='${JSON.stringify(checkedIds)}'>`);
     })
 
     function cetak() {
@@ -35,7 +42,7 @@
                     <input type="hidden" name="judul" value="">
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input" id="privasi_nik">
-                        <label class="form-check-label" for="cetak_privasi_nik">Sensor NIK/No. KK</label>
+                        <label class="form-check-label" for="privasi_nik">Sensor NIK/No. KK</label>
                     </div>
                 </div>
             </div>

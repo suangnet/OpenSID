@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -37,7 +37,6 @@
 
 namespace Modules\Analisis\Libraries;
 
-use App\Enums\AnalisisRefSubjekEnum;
 use App\Models\Keluarga;
 use App\Models\Penduduk;
 use Exception;
@@ -45,6 +44,7 @@ use Google\Client;
 use Google\Service\Script;
 use Google\Service\Script\ExecutionRequest;
 use Illuminate\Http\Request;
+use Modules\Analisis\Enums\AnalisisRefSubjekEnum;
 use Modules\Analisis\Models\AnalisisIndikator;
 use Modules\Analisis\Models\AnalisisKategori;
 use Modules\Analisis\Models\AnalisisMaster;
@@ -212,14 +212,6 @@ class Gform
         }
 
         return ['error' => $list_error];
-    }
-
-    protected function getOAuthCredentialsFile()
-    {
-        // Hanya ambil dari config jika tidak ada setting aplikasi utk redirect_uri
-        $api_gform_credential = setting('api_gform_credential') ?? config_item('api_gform_credential');
-
-        return json_decode(str_replace('\"', '"', $api_gform_credential), true);
     }
 
     public function import_gform($redirect_link = '')
@@ -511,5 +503,13 @@ class Gform
         }
 
         return $result;
+    }
+
+    protected function getOAuthCredentialsFile()
+    {
+        // Hanya ambil dari config jika tidak ada setting aplikasi utk redirect_uri
+        $api_gform_credential = setting('api_gform_credential') ?? config_item('api_gform_credential');
+
+        return json_decode(str_replace('\"', '"', $api_gform_credential), true);
     }
 }

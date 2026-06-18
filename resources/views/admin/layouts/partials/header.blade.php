@@ -10,6 +10,9 @@
         </a>
         <div class="navbar-custom-menu">
             <ul class="nav navbar-nav">
+
+                @yield('notifikasi')
+
                 @if ($is_mobile = $ci->agent->is_mobile())
                     <li class="dropdown notifications-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="true">Selengkapnya...</a>
@@ -31,8 +34,7 @@
                     </li>
                 @endif
 
-                {{-- TODO:: Cek ini kenapa statis --}}
-                @if (in_array('343', array_column($modul ?? [], 'id')) && can('b', 'pesan'))
+                @if (can('b', 'pesan'))
                     <li class="komunikasi-opendk">
                         <a href="{{ ci_route('opendk_pesan.clear') }}">
                             <i class="fa fa-university fa-lg" title="Komunikasi OpenDK"></i>&nbsp;
@@ -62,7 +64,7 @@
 
                 @if (can('b', 'komentar'))
                     <li>
-                        <a href="{{ ci_route('komentar') }}">
+                        <a href="{{ ci_route('komentar') }}?status={{ App\Models\Komentar::UNREAD }}">
                             <i class="fa fa-commenting-o fa-lg" title="Komentar"></i>&nbsp;
                             @if ($notif['komentar'])
                                 <span class="badge" id="b_komentar">{{ $notif['komentar'] }}</span>

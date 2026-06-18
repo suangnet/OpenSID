@@ -11,7 +11,7 @@
  * Aplikasi dan source code ini dirilis berdasarkan lisensi GPL V3
  *
  * Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  *
  * Dengan ini diberikan izin, secara gratis, kepada siapa pun yang mendapatkan salinan
  * dari perangkat lunak ini dan file dokumentasi terkait ("Aplikasi Ini"), untuk diperlakukan
@@ -29,7 +29,7 @@
  * @package   OpenSID
  * @author    Tim Pengembang OpenDesa
  * @copyright Hak Cipta 2009 - 2015 Combine Resource Institution (http://lumbungkomunitas.net/)
- * @copyright Hak Cipta 2016 - 2024 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
+ * @copyright Hak Cipta 2016 - 2025 Perkumpulan Desa Digital Terbuka (https://opendesa.id)
  * @license   http://www.gnu.org/licenses/gpl.html GPL V3
  * @link      https://github.com/OpenSID/OpenSID
  *
@@ -39,6 +39,7 @@ namespace App\Models;
 
 use App\Traits\Author;
 use App\Traits\ConfigId;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 defined('BASEPATH') || exit('No direct script access allowed');
@@ -51,18 +52,18 @@ class DokumenHidup extends BaseModel
     public const ENABLE = 1;
 
     /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'dokumen_hidup';
-
-    /**
      * The timestamps for the model.
      *
      * @var bool
      */
     public $timestamps = true;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'dokumen_hidup';
 
     /**
      * The guarded with the model.
@@ -107,6 +108,24 @@ class DokumenHidup extends BaseModel
         }
     }
 
+    public static function listDokumen($idPenduduk)
+    {
+        $data    = self::where('id_pend', $idPenduduk)->where('deleted', 0)->get()->toArray();
+        $counter = count($data);
+
+        for ($i = 0; $i < $counter; $i++) {
+            $data[$i]['no']     = $i + 1;
+            $data[$i]['hidden'] = false;
+
+            // jika dokumen berelasi dengan dokumen kepala kk
+            if (isset($data[$i]['id_parent'])) {
+                $data[$i]['hidden'] = true;
+            }
+        }
+
+        return $data;
+    }
+
     public function scopePeraturanDesa($query, $kat, $tahun = '')
     {
         $query->where('kategori', $kat);
@@ -124,12 +143,22 @@ class DokumenHidup extends BaseModel
 
     public function scopeInformasiPublik($query)
     {
-        return $query->where(['id_pend' => 0]);
+        return $query->whereNull('id_pend');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where(['enabled' => self::ENABLE]);
+    }
+
+    public function scopeNonActive($query)
+    {
+        return $query->where('enabled', '!=', self::ENABLE);
     }
 
     public function scopeDataCetak($query, $kat = 1, ?string $tahun = '', ?string $jenis_peraturan = '')
     {
-        $query = $query->where('id_pend', '0')->where('enabled', '1');
+        $query = $query->whereNull('id_pend')->where('enabled', '1');
 
         if ($tahun !== null && $tahun !== '' && $tahun !== '0') {
             switch ($kat) {
@@ -252,7 +281,7 @@ class DokumenHidup extends BaseModel
                 DB::raw("'dokumen_desa' as kategori"),
                 DB::raw('NULL as lampiran'),
             ])
-            ->where('id_pend', 0)
+            ->whereNull('id_pend')
             ->whereNotNull('satuan');
     }
 
@@ -278,8 +307,26 @@ class DokumenHidup extends BaseModel
                 DB::raw('NULL as lampiran'),
             ])
             ->join('tweb_penduduk', 'dokumen_hidup.id_pend', '=', 'tweb_penduduk.id')
-            ->join('ref_syarat_surat', 'dokumen_hidup.id_syarat', '=', 'ref_syarat_surat.ref_syarat_id')
-            ->where('dokumen_hidup.id_pend', '!=', 0)
+            ->leftJoin('ref_syarat_surat', 'dokumen_hidup.id_syarat', '=', 'ref_syarat_surat.ref_syarat_id')
+            ->whereNotNull('dokumen_hidup.id_pend')
             ->whereNotNull('dokumen_hidup.satuan');
+    }
+
+    /**
+     * Mendapatkan tanggal retensi yang diformat jika masih aktif.
+     *
+     * Jika tanggal retensi ada dan masih aktif, akan mengembalikan tanggal dalam format 'd F Y H:i:s'.
+     * Jika dokumen sudah kadaluarsa atau tidak ada tanggal retensi, akan mengembalikan tanda '-'.
+     *
+     * @return string
+     */
+    public function getExpiredAtFormattedAttribute()
+    {
+        $isActive = Carbon::now()->lessThanOrEqualTo(Carbon::parse($this->retensi_date));
+        if ($this->retensi_date && $isActive) {
+            return Carbon::parse($this->retensi_date)->translatedFormat('d F Y H:i');
+        }
+
+        return '-';
     }
 }

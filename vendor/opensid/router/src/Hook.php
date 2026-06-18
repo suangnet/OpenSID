@@ -89,7 +89,7 @@ class Hook
                 $mapModules = array_merge($mapModules, glob($key . '*/Routes/web.php'));
             }
 
-            $fileWeb = array_merge($mapModules, glob(APPPATH . 'Routes/web.php'));
+            $fileWeb = array_merge(glob(APPPATH . 'Routes/web.php'), $mapModules);
             foreach ($fileWeb as $file) {
                 require_once $file;
             }
@@ -111,7 +111,7 @@ class Hook
                         $mapModules = array_merge($mapModules, glob($key . '*/Routes/api.php'));
                     }
                     // Include all routes api.php
-                    $fileApi = array_merge($mapModules, glob(APPPATH . 'Routes/api.php'));
+                    $fileApi = array_merge(glob(APPPATH . 'Routes/api.php'), $mapModules);
                     foreach ($fileApi as $file) {
                         require_once $file;
                     }
@@ -230,7 +230,7 @@ class Hook
             foreach(explode('/', $path) as $currentSegmentIndex => $segment) {
                 $key = [];
 
-                if(preg_match('/\{(.*?)\}+/', $segment)) {
+                if (preg_match('/\{(.*?)\}+/', (string) $segment)) {
 
                     foreach ($route->params as $param) {
                         if (empty($key[$param->getSegmentIndex()])) {
@@ -244,7 +244,10 @@ class Hook
                         if ($param->segmentIndex === $currentSegmentIndex) {
                             $segment = preg_replace('/\((.*)\):/', '', $segment);
 
-                            if (preg_match('#^' . $key[$currentSegmentIndex] . '$#', $URI->segment($currentSegmentIndex + 1), $matches)) {
+                            $segmentValue = $URI->segment($currentSegmentIndex + 1) ?? '';
+                            $keyValue = $key[$currentSegmentIndex] ?? '';
+
+                            if (preg_match('#^' . $keyValue . '$#', $segmentValue, $matches)) {
                                 if (isset($matches[$pcount + 1 - $scount])) {
                                     $route->params[$pcount]->value = $matches[$pcount + 1 - $scount];
                                 }
