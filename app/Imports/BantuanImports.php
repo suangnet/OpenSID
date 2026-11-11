@@ -91,6 +91,11 @@ class BantuanImports
                     for ($i = 0; $i <= 5; $i++) {
                         $title = $this->getValue($sheet[$i])[0];
                         $value = $this->getValue($sheet[$i])[1];
+                        
+                        if ($value instanceof \DateTimeInterface) {
+                            $value = $value->format('Y-m-d');
+                        }
+
                         if (in_array($i, [4, 5]) && ! validate_date($value, 'Y-m-d')) {
                             $msg = ', Data program baris <b> Ke-' . ($no_baris) . '</b> berisi tanggal yang salah. Cek kembali data ' . $title . ' = ' . $value;
                             redirect_with('error', $msg);
@@ -121,28 +126,31 @@ class BantuanImports
 
                         $cells = array_values($value);
 
-                        $peserta = (string) $cells[0];
-                        $nik     = (string) $cells[2];
+                        $peserta = trim((string) $cells[0]);
+                        $nik     = trim((string) $cells[2]);
 
-                        // Cek valid data peserta sesuai sasaran
-                        $cek_peserta = Bantuan::cek_peserta($peserta, $sasaran);
-
-                        if (! in_array($nik, $cek_peserta['valid'])) {
-                            $no_gagal++;
-                            $pesan_peserta .= '- Data peserta baris <b> Ke-' . ($no_baris) . ' / ' . $cek_peserta['sasaran_peserta'] . ' = ' . $peserta . '</b> tidak ditemukan <br>';
-
+                        // Lewati baris footer/catatan template dari Excel
+                        if (empty($peserta) || $peserta === '###' || stripos($peserta, 'catatan') !== false || stripos($peserta, 'kolom') !== false) {
                             continue;
                         }
+
+                        // Cek valid data peserta sesuai sasaran (DIMATIKAN SEMENTARA AGAR BISA IMPOR TANPA DATA PENDUDUK)
+                        // $cek_peserta = Bantuan::cek_peserta($peserta, $sasaran);
+
+                        // if (! in_array($nik, $cek_peserta['valid'])) {
+                        //     $no_gagal++;
+                        //     $pesan_peserta .= '- Data peserta baris <b> Ke-' . ($no_baris) . ' / ' . $cek_peserta['sasaran_peserta'] . ' = ' . $peserta . '</b> tidak ditemukan <br>';
+                        //     continue;
+                        // }
 
                         // Cek valid data penduduk sesuai nik
                         $cek_penduduk = Penduduk::where('nik', $nik)->first();
 
-                        if (! $cek_penduduk['id']) {
-                            $no_gagal++;
-                            $pesan_peserta .= '- Data peserta baris <b> Ke-' . ($no_baris) . ' / NIK = ' . $nik . '</b> yang terdaftar tidak ditemukan <br>';
-
-                            continue;
-                        }
+                        // if (! $cek_penduduk['id']) {
+                        //     $no_gagal++;
+                        //     $pesan_peserta .= '- Data peserta baris <b> Ke-' . ($no_baris) . ' / NIK = ' . $nik . '</b> yang terdaftar tidak ditemukan <br>';
+                        //     continue;
+                        // }
 
                         // Cek data peserta yg akan dimpor dan yg sudah ada
                         if (in_array($peserta, $terdaftar_peserta) && $ganti_peserta != 1) {
@@ -162,11 +170,17 @@ class BantuanImports
                         $kartu_nama          = (string) $cells[3];
                         $kartu_tempat_lahir  = (string) $cells[4];
                         $kartu_tanggal_lahir = $cells[5];
+                        
+                        if ($kartu_tanggal_lahir instanceof \DateTimeInterface) {
+                            $kartu_tanggal_lahir = $kartu_tanggal_lahir->format('Y-m-d');
+                        }
+
                         // $kartu_tanggal_lahir = $this->cek_is_date($kartu_tanggal_lahir);
                         $kartu_alamat = (string) $cells[6];
 
                         if (empty($kartu_tanggal_lahir)) {
-                            $kartu_tanggal_lahir = $cek_penduduk['tanggallahir'];
+                            // Gunakan tanggal default jika tidak ada di excel dan penduduk tidak ditemukan
+                            $kartu_tanggal_lahir = $cek_penduduk ? $cek_penduduk['tanggallahir'] : '1900-01-01';
                         } elseif (! validate_date($kartu_tanggal_lahir, 'Y-m-d')) {
                             $no_gagal++;
                             $pesan_peserta .= '- Data peserta baris <b> Ke-' . ($no_baris) . '</b> berisi tanggal yang salah<br>';
@@ -180,9 +194,9 @@ class BantuanImports
 
                         // Ubah data peserta menjadi id (untuk saat ini masih data kelompok yg menggunakan id)
                         // Berkaitan dgn issue #3417
-                        if ($sasaran == 4) {
-                            $peserta = $cek_peserta['id'];
-                        }
+                        // if ($sasaran == 4) {
+                        //     $peserta = $cek_peserta['id'];
+                        // }
 
                         $simpan = [
                             'config_id'           => identitas('id'),
@@ -190,11 +204,11 @@ class BantuanImports
                             'program_id'          => $program_id,
                             'no_id_kartu'         => $no_id_kartu,
                             'kartu_nik'           => $nik,
-                            'kartu_nama'          => $kartu_nama ?: $cek_penduduk['nama'],
-                            'kartu_tempat_lahir'  => $kartu_tempat_lahir ?: $cek_penduduk['tempatlahir'],
+                            'kartu_nama'          => $kartu_nama ?: ($cek_penduduk ? $cek_penduduk['nama'] : '-'),
+                            'kartu_tempat_lahir'  => $kartu_tempat_lahir ?: ($cek_penduduk ? $cek_penduduk['tempatlahir'] : '-'),
                             'kartu_tanggal_lahir' => $kartu_tanggal_lahir,
-                            'kartu_alamat'        => $kartu_alamat ?: $cek_penduduk['alamat_wilayah'],
-                            'kartu_id_pend'       => $cek_penduduk['id'],
+                            'kartu_alamat'        => $kartu_alamat ?: ($cek_penduduk ? $cek_penduduk['alamat_wilayah'] : '-'),
+                            'kartu_id_pend'       => $cek_penduduk ? $cek_penduduk['id'] : null,
                         ];
                         $data_peserta[] = $simpan;
                         $no_sukses++;

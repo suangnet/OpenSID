@@ -230,9 +230,7 @@ class Bantuan extends BaseModel
         if ($data_peserta == null) {
             return true;
         }
-        if ($kosongkan_peserta == 1) {
-            return true;
-        }
+
         BantuanPeserta::insert($data_peserta);
 
         return true;
